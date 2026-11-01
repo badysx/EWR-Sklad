@@ -1,8 +1,9 @@
+// Mazat jen vlastní cache – obě aplikace jsou na stejném webu a sdílejí úložiště cache.
 // Offline cache: aplikace se otevře i bez internetu; při připojení se načte nejnovější verze.
-const CACHE = 'ewrsk-v14';
+const CACHE = 'ewrsk-v15';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'ewr-sklad-192.png', 'ewr-sklad-512.png', 'barcode.js', 'zxing_reader.wasm'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
-self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n !== CACHE).map(n => caches.delete(n))))); self.clients.claim(); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(n => n.startsWith('ewrsk-') && n !== CACHE).map(n => caches.delete(n))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(fetch(e.request).then(r => { const c = r.clone(); caches.open(CACHE).then(x => x.put(e.request, c)); return r; })

@@ -271,7 +271,7 @@ const MEDIUM={0x02:'elektřina',0x03:'plyn',0x04:'teplo',0x06:'TUV',0x07:'voda',
 const MAN={APA:'Apator',KAM:'Kamstrup',DME:'Diehl',HYD:'Diehl',QDS:'Qundis',SON:'Sontex',LSE:'Siemens',ITW:'Itron',SEN:'Sensus',BMT:'B METERS',ZRI:'Zenner',ZRM:'Zenner',EFE:'Engelmann',TCH:'Techem',IST:'ista',LUG:'Landis+Gyr',ELS:'Elster',MAD:'Maddalena',AMT:'Aquametro',WEH:'Wehrle'};
 const typeName=t=>t==null?'':(MEDIUM[t]||'typ 0x'+h2(t));
 const manName=m=>m?(MAN[m]||m):'';
-const APP_VER=14;
+const APP_VER=15;
 const WAIT_MIN=10;   // po kolika minutách bez vysílání je měřidlo „problém“
 
 
@@ -357,6 +357,9 @@ $('scDone').onclick=()=>{closeScanner();if(sessCount)toast(`Přidáno ${pl(sessC
 $('bScan').onclick=()=>openScanner('inv');
 
 // ================= menu =================
+let instEv=null;   // vlastní tlačítko instalace (Chrome jinak u druhé aplikace na stejném webu hlásí „již nainstalováno“)
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instEv=e});
+window.addEventListener('appinstalled',()=>{instEv=null});
 function renderMenu(){
   const s=devState,est=batEstimate(),c=connected(),tot=s?s.ok+s.crc:0;
   const usb=dgOn();
@@ -376,6 +379,7 @@ function renderMenu(){
     <div class="eyebrow" style="margin-top:6px">USB dongle</div>
     <div class="acts"><label class="field" style="flex:1">rychlost (Bd)<select id="mBaud" ${usb?'disabled':''}>${[9600,19200,38400,57600,115200].map(b=>`<option ${b===(settings.baud||19200)?'selected':''}>${b}</option>`).join('')}</select></label>
       <label class="mi" style="flex:1;display:flex;align-items:center;gap:8px;min-height:46px;align-self:end;border:0"><input type="checkbox" id="mDgRssi" ${settings.dgRssi?'checked':''} style="width:22px;height:22px">dongle posílá RSSI</label></div>
+    ${instEv?'<button class="mi" id="mInstall">nainstalovat aplikaci na plochu</button>':''}
     <button class="mi" id="mHelp">nápověda</button>
     <button class="mi" id="mDemo">${isDemo?'ukončit demo':'demo bez EWR-TD (na zkoušku)'}</button>
     ${c&&!isDemo?`<button class="mi" id="mDisc">${usb?'odpojit USB dongle':'odpojit EWR-TD (příjem se vypne)'}</button>`:''}
@@ -384,7 +388,7 @@ function renderMenu(){
   on('mConn',()=>{closeSheets();connect()});
   on('mRx',()=>setRx(!(devState&&devState.rx)).then(renderMenu));
   const mm=$('mMode');if(mm)mm.onchange=e=>{settings.mode=+e.target.value;LS('ewrsk_settings',settings);if(devState&&devState.rx)setRx(true)};
-  on('mHelp',()=>openSheet('shHelp'));
+  on('mInstall',async()=>{closeSheets();const ev=instEv;instEv=null;try{ev.prompt();const r=await ev.userChoice;if(r&&r.outcome==='accepted')toast('Aplikace se instaluje na plochu.')}catch(e){toast('Instalace se nezdařila.',{err:true})}});on('mHelp',()=>openSheet('shHelp'));
   on('mRxDg',()=>{setRx(!devState.rx);renderMenu()});
   const mb=$('mBaud');if(mb)mb.onchange=e=>{settings.baud=+e.target.value;LS('ewrsk_settings',settings)};
   const mr=$('mDgRssi');if(mr)mr.onchange=e=>{settings.dgRssi=e.target.checked;LS('ewrsk_settings',settings);dgBuf=[]};
