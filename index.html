@@ -182,6 +182,9 @@ main .wrap{padding:8px 16px 150px}
 .zbig{display:flex;align-items:baseline;gap:12px}.zbig>b{flex-shrink:0}@media (max-width:400px){.zbig .zrest{display:none}}.zbig .zend{margin-left:auto;white-space:nowrap}.zbig .zend b{margin-left:8px;font-size:28px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums}.zbig b{font-size:56px;font-weight:900;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}.zbig span{color:var(--muted);font-size:15px}
 .zmeter{height:8px;background:var(--b1)}.zmeter i{display:block;height:100%;background:var(--red);transition:width .9s linear}
 .zcount{font-size:16px;color:var(--body)}.zcount b{font-size:22px;color:var(--ink)}
+.xb{min-width:34px;height:30px;padding:0 8px;font-family:inherit;border:1px solid var(--b3);background:#fff;color:var(--ink);font-size:13px;cursor:pointer}
+.chk{color:#8a5a00;font-weight:700}.tbl tr.ex td{color:var(--faint);text-decoration:line-through}.tbl tr.ex td:first-child{text-decoration:none}
+#zCand .zc{display:flex;gap:8px;align-items:center;margin-top:6px}#zCand .zc span:nth-child(2){flex:1;font-size:13px}
 .okbox{background:#e8f6ee;border:1px solid #b9e3c9;color:#145c35;padding:10px 12px;font-size:15px}
 .zmain{display:grid;gap:12px;padding-top:14px!important}
 .rolecard{display:grid;gap:6px;text-align:left;padding:16px;background:#fff;border:1.5px solid var(--b2);border-radius:10px;font-size:15px;color:var(--body);cursor:pointer}
@@ -245,9 +248,10 @@ main .wrap{padding:8px 16px 150px}
     <div class="li"><span><b>1. Rádiové pozadí.</b> Prázdný kontejner, výchozí 10 minut. Moduly zachycené teď se z výsledku vyloučí.</span></div>
     <div class="li"><span><b>2. Zásilka.</b> Přivezte paletu pro zákazníka a spusťte načítání, výchozí 30 minut. Moduly vysílají zhruba jednou za minutu.</span></div>
     <div class="li"><span><b>Štítky.</b> Kód, který jde přečíst (QR, čárový, DataMatrix), naskenujte tlačítkem dole. Doplní se do výsledku, i když modul nevysílá.</span></div>
-    <div class="li"><span><b>Nesedí počet.</b> Méně: prodlužte načítání (načítat znovu). Víc: zkontrolujte šedé řádky s jedním telegramem a slabým signálem.</span></div>
+    <div class="li"><span><b>Jistota.</b> Modul zachycený jen rádiem je „k ověření“, když má slabý signál, jen jeden telegram, vysílá řidčeji, než trvalo rádiové pozadí, nebo je jiného výrobce či typu než většina zásilky. Křížkem ✕ na začátku řádku ho vyřadíte z výsledku i z tabulky, tlačítkem „vrátit“ ho vrátíte.</span></div>
+    <div class="li"><span><b>Nesedí počet.</b> Méně: prodlužte načítání (načítat znovu). Víc: aplikace navrhne moduly, které se od zásilky nejvíc liší, a můžete je vyřadit.</span></div>
     <div class="li"><span><b>Telefon.</b> Nechte aplikaci otevřenou s rozsvíceným displejem. Prohlížeč: Chrome na Androidu a počítači, Edge na počítači, na iPhonu Bluefy.</span></div>
-    <div class="li"><span><b>USB dongle.</b> Radiocrafts RC1180-MBUS s převodníkem FTDI. V telefonu přes USB-C OTG redukci (Chrome povolí přístup k zařízení), v počítači přímo (Chrome nebo Edge). Výchozí rychlost 19200 Bd. Pokud má modul zapnutý RSSI_MODE, zaškrtněte v menu „dongle posílá RSSI“, jinak se signál neukazuje.</span></div>
+    <div class="li"><span><b>USB dongle.</b> Radiocrafts RC1180-MBUS s převodníkem FTDI. V telefonu přes USB-C OTG redukci (Chrome povolí přístup k zařízení), v počítači přímo (Chrome nebo Edge). Výchozí rychlost 19200 Bd. Zda modul posílá i sílu signálu (RSSI), aplikace pozná sama. Když se kabel uvolní, dongle se po zasunutí připojí znovu sám.</span></div>
     <div class="li"><span><b>EWR-TD se nepřipojí.</b> Ukončete aplikaci EWM, v nastavení Bluetooth u EWR-TD zvolte Zapomenout, vypněte a zapněte Bluetooth. EWR-TD nesmí být připojené k jinému telefonu.</span></div>
   </div>
 </div></div>
@@ -271,7 +275,8 @@ const MEDIUM={0x02:'elektřina',0x03:'plyn',0x04:'teplo',0x06:'TUV',0x07:'voda',
 const MAN={APA:'Apator',KAM:'Kamstrup',DME:'Diehl',HYD:'Diehl',QDS:'Qundis',SON:'Sontex',LSE:'Siemens',ITW:'Itron',SEN:'Sensus',BMT:'B METERS',ZRI:'Zenner',ZRM:'Zenner',EFE:'Engelmann',TCH:'Techem',IST:'ista',LUG:'Landis+Gyr',ELS:'Elster',MAD:'Maddalena',AMT:'Aquametro',WEH:'Wehrle'};
 const typeName=t=>t==null?'':(MEDIUM[t]||'typ 0x'+h2(t));
 const manName=m=>m?(MAN[m]||m):'';
-const APP_VER=15;
+const APP_VER='1.0';    // verze pro uživatele (menu, poslední řádek)
+const APP_BUILD=17;   // interní číslo sestavení – posílá se s předávanými záznamy kvůli kompatibilitě
 const WAIT_MIN=10;   // po kolika minutách bez vysílání je měřidlo „problém“
 
 
@@ -297,7 +302,7 @@ function handleTelegram(fr,rssi){
   Object.assign(m,{type:o.type,ver:o.ver,status:o.status,rssi:o.rssi,last:o.t,enc:o.enc});m.count++;
   zasFrame(o);
   // štítek s dlouhým kódem: ID určí vysílání
-  for(const s of Object.values(zas.scan))if(!s.id&&s.cands&&s.cands.includes(o.id)){s.id=o.id;s.cands=null;learnRule(s.raw,o.id);saveZas()}
+  for(const s of Object.values(zas.scan))if(!s.id&&s.cands&&s.cands.includes(o.id)){s.id=o.id;s.cands=null;learnRule(s.raw,o.id);zasVer++;saveZas()}
   saveMeters();return o;
 }
 function setTop(kind,txt){
@@ -322,7 +327,7 @@ function addScan(val){
     if(heard.length===1){id=heard[0];how='podle vysílání';learnRule(val,id)}else{id=ruleGuess(val);if(id)how='podle dřívějších štítků'}}
   const key=id||'?'+val;
   if(zas.scan[key])return{ok:false,msg:`${id||val} už je naskenovaný`};
-  zas.scan[key]={id:id||'',cands:id?null:cands,raw:val,t:Date.now()};saveZas(true);drawZas(true);
+  zas.scan[key]={id:id||'',cands:id?null:cands,raw:val,t:Date.now()};zasVer++;saveZas(true);drawZas(true);
   const radio=id&&zasResult().some(m=>m.id===id&&m.src!=='štítek');
   return{ok:true,msg:`✓ ${id||'? '+cands.join(' / ')}${how?' ('+how+')':''}${radio?' · vysílá':''}`};
 }
@@ -367,7 +372,7 @@ function renderMenu(){
     ${usb?`<div class="cards3">
       <div class="mcard"><div class="k">rychlost</div><div class="v">${settings.baud||19200}</div><div class="s">Bd, 8N1</div></div>
       <div class="mcard"><div class="k">telegramy</div><div class="v">${s.ok}</div><div class="s">${s.crc?s.crc+' nečitelných':'vše čitelné'}</div></div>
-      <div class="mcard"><div class="k">RSSI</div><div class="v">${settings.dgRssi?'ano':'ne'}</div><div class="s">bajt navíc</div></div></div>
+      <div class="mcard"><div class="k">RSSI</div><div class="v">${dgAuto.n>=3?(dgRssiMode()?'ano':'ne'):'…'}</div><div class="s">${dgAuto.n>=3?'zjištěno samo':'zjišťuji'}</div></div></div>
       <div class="acts"><button class="btn grow" id="mRxDg">${s.rx?'pozastavit příjem':'obnovit příjem'}</button></div>`
     :c&&s?`<div class="cards3">
       <div class="mcard"><div class="k">baterie</div><div class="v" style="color:${s.bat>50?'var(--ink)':s.bat>=20?'#8a5a00':'var(--bad)'}">${s.bat} %</div><div class="s">${est?'vydrží ≈ '+(est.left<1?Math.round(est.left*60)+' min':est.left.toFixed(1)+' h'):'odhad po 10 min'}</div></div>
@@ -378,12 +383,13 @@ function renderMenu(){
       :`<button class="btn primary" id="mConn" style="height:50px">připojit přijímač</button>`}
     <div class="eyebrow" style="margin-top:6px">USB dongle</div>
     <div class="acts"><label class="field" style="flex:1">rychlost (Bd)<select id="mBaud" ${usb?'disabled':''}>${[9600,19200,38400,57600,115200].map(b=>`<option ${b===(settings.baud||19200)?'selected':''}>${b}</option>`).join('')}</select></label>
-      <label class="mi" style="flex:1;display:flex;align-items:center;gap:8px;min-height:46px;align-self:end;border:0"><input type="checkbox" id="mDgRssi" ${settings.dgRssi?'checked':''} style="width:22px;height:22px">dongle posílá RSSI</label></div>
+      <span style="flex:1;align-self:end;font-size:13px;color:var(--muted);padding-bottom:4px">Signál (RSSI) aplikace pozná sama.</span></div>
     ${instEv?'<button class="mi" id="mInstall">nainstalovat aplikaci na plochu</button>':''}
     <button class="mi" id="mHelp">nápověda</button>
     <button class="mi" id="mDemo">${isDemo?'ukončit demo':'demo bez EWR-TD (na zkoušku)'}</button>
     ${c&&!isDemo?`<button class="mi" id="mDisc">${usb?'odpojit USB dongle':'odpojit EWR-TD (příjem se vypne)'}</button>`:''}
-    <div style="font-size:13px;color:var(--muted);padding-top:6px">Verze aplikace ${APP_VER}. Soukromí: všechna data jsou uložená jen v tomto zařízení. Aplikace nic neodesílá na internet – ven jdou jen data, která sami sdílíte (tabulka).</div>`;
+    <div style="font-size:13px;color:var(--muted);padding-top:6px">Soukromí: všechna data jsou uložená jen v tomto zařízení. Aplikace nic neodesílá na internet – ven jdou jen data, která sami sdílíte (tabulka).</div>
+    <div style="font-size:13px;color:var(--muted);padding-top:4px">verze ${APP_VER}</div>`;
   const on=(id,f)=>{const e=$(id);if(e)e.onclick=f};
   on('mConn',()=>{closeSheets();connect()});
   on('mRx',()=>setRx(!(devState&&devState.rx)).then(renderMenu));
@@ -391,7 +397,6 @@ function renderMenu(){
   on('mInstall',async()=>{closeSheets();const ev=instEv;instEv=null;try{ev.prompt();const r=await ev.userChoice;if(r&&r.outcome==='accepted')toast('Aplikace se instaluje na plochu.')}catch(e){toast('Instalace se nezdařila.',{err:true})}});on('mHelp',()=>openSheet('shHelp'));
   on('mRxDg',()=>{setRx(!devState.rx);renderMenu()});
   const mb=$('mBaud');if(mb)mb.onchange=e=>{settings.baud=+e.target.value;LS('ewrsk_settings',settings)};
-  const mr=$('mDgRssi');if(mr)mr.onchange=e=>{settings.dgRssi=e.target.checked;LS('ewrsk_settings',settings);dgBuf=[]};
   on('mDemo',()=>{closeSheets();isDemo?stopDemo():startDemo()});
   on('mDisc',()=>{closeSheets();disconnect()});
 }
@@ -405,9 +410,16 @@ function decode(fr){
   const o={t:new Date(),hex:hex(fr)};
   if(fr.length<11){o.bad=true;return o}
   o.man=manuf(fr[2],fr[3]);o.id=hex(Array.from(fr.slice(4,8)).reverse());o.ver=fr[8];o.type=fr[9];o.ci=fr[10];
-  if(o.ci===0x7A&&fr.length>=15){o.acc=fr[11];o.status=fr[12];o.enc=((fr[13]|fr[14]<<8)>>8)&0x1F}else if(o.ci===0x72&&fr.length>=23){o.acc=fr[19];o.status=fr[20];o.enc=((fr[21]|fr[22]<<8)>>8)&0x1F}
+  tplOf(fr,10,o);
   return o;
 }
+// hlavička transportní vrstvy; u rozšířené linkové vrstvy (ELL, CI 0x8C/0x8E – Kamstrup, Diehl…) leží až za ní
+function tplOf(fr,i,o){const ci=fr[i];
+  if(ci===0x8C&&fr.length>i+3)return tplOf(fr,i+3,o);
+  if(ci===0x8E&&fr.length>i+11)return tplOf(fr,i+11,o);
+  if(ci===0x8D||ci===0x8F){o.enc=-1;return}   // celý obsah šifrovaný už v ELL
+  if(ci===0x7A&&fr.length>i+4){o.acc=fr[i+1];o.status=fr[i+2];o.enc=fr[i+4]&0x1F}
+  else if(ci===0x72&&fr.length>i+12){o.acc=fr[i+9];o.status=fr[i+10];o.enc=fr[i+12]&0x1F}}
 function flagsOf(st){if(st==null)return[];const f=[];if(st&4)f.push('slabá baterie');if(st&8)f.push('trvalá chyba');if(st&16)f.push('dočasná chyba');if((st&3)===2)f.push('chyba měřidla');return f}
 function meterById(id){let b=null;for(const m of meters.values())if(m.id===id&&(!b||m.last>b.last))b=m;return b}
 function fillFromMeter(r){if(!r.id)return;const m=meterById(r.id);if(!m)return;Object.assign(r,{first:r.first||m.first,last:m.last,count:m.count,rssi:m.rssi,man:m.man,type:m.type,status:m.status})}
@@ -585,11 +597,13 @@ const hashc=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;retu
 
 // ================= načtení zásilky rádiem: pozadí → zásilka → rozdíl =================
 // Fáze: setup → bg (pozadí) → gap (přivézt paletu) → ship (zásilka) → done
-const ZAS0={name:'',expected:'',bgMin:10,shMin:30,phase:'setup',bgStart:0,bgEnd:0,shStart:0,shEnd:0,bg:{},sh:{},scan:{},gaps:[]};
-let zas=Object.assign({},ZAS0,LS('ewrsk_zas')||{});if(!zas.scan)zas.scan={};if(!zas.gaps)zas.gaps=[];
+const ZAS0={name:'',expected:'',bgMin:10,shMin:30,phase:'setup',bgStart:0,bgEnd:0,shStart:0,shEnd:0,bg:{},sh:{},scan:{},gaps:[],excl:{}};
+let zas=Object.assign({},ZAS0,LS('ewrsk_zas')||{});if(!zas.scan)zas.scan={};if(!zas.gaps)zas.gaps=[];if(!zas.excl)zas.excl={};
+let zasVer=0;   // zvýší se při každé změně dat → tabulky se překreslí jen tehdy
+const setHtml=(el,h)=>{if(el&&el._h!==h){el.innerHTML=h;el._h=h}};
 let zasSaveT=null;const saveZas=(now)=>{if(now){clearTimeout(zasSaveT);zasSaveT=null;LS('ewrsk_zas',zas);return}if(!zasSaveT)zasSaveT=setTimeout(()=>{zasSaveT=null;LS('ewrsk_zas',zas)},3000)};
 let zasSort=LS('ewrsk_zassort')||{k:'last',dir:-1};
-const encName=e=>e==null?'–':e===0?'bez šifrování':e===5?'AES (mód 5)':e===7?'AES (mód 7)':'mód '+e;
+const encName=e=>e==null?'–':e===-1?'AES (ELL)':e===0?'bez šifrování':e===5?'AES (mód 5)':e===7?'AES (mód 7)':'mód '+e;
 function gapStart(){if(zas.phase!=='bg'&&zas.phase!=='ship')return;const g=zas.gaps[zas.gaps.length-1];if(g&&!g.b)return;zas.gaps.push({a:Date.now()});saveZas(true);beep(1);vib([300,100,300])}
 function gapEnd(){const g=zas.gaps[zas.gaps.length-1];if(g&&!g.b){g.b=Date.now();saveZas(true)}}
 function outage(a,b){let t=0;for(const g of zas.gaps){const x=Math.max(g.a,a),y=Math.min(g.b||Date.now(),b);if(y>x)t+=y-x}return t}
@@ -599,31 +613,58 @@ function zasFrame(o){
   const map=ph==='bg'?zas.bg:zas.sh,k=o.man+'-'+o.id;let m=map[k];
   if(!m){m=map[k]={id:o.id,man:o.man,type:o.type,ver:o.ver,enc:o.enc,first:now,last:now,n:0,rl:o.rssi,rmax:o.rssi,rsum:0,rc:0,st:o.status,acc:o.acc};
     if(ph==='ship'&&!zas.bg[k]){beep(0);vib(40)}}
-  m.n++;m.last=now;if(o.rssi!=null){m.rl=o.rssi;m.rsum+=o.rssi;m.rc=(m.rc||0)+1;if(m.rmax==null||o.rssi>m.rmax)m.rmax=o.rssi}if(o.status!=null)m.st=o.status;if(o.enc!=null)m.enc=o.enc;m.type=o.type;m.ver=o.ver;
+  zasVer++;m.n++;m.last=now;if(o.rssi!=null){m.rl=o.rssi;m.rsum+=o.rssi;m.rc=(m.rc||0)+1;if(m.rmax==null||o.rssi>m.rmax)m.rmax=o.rssi}if(o.status!=null)m.st=o.status;if(o.enc!=null)m.enc=o.enc;m.type=o.type;m.ver=o.ver;
   saveZas();
 }
 // výsledek = moduly zachycené při zásilce, které nebyly v pozadí, + naskenované štítky
 function zasResult(){const out=new Map();
-  Object.entries(zas.sh).forEach(([k,m])=>{if(!zas.bg[k])out.set(m.id,Object.assign({k,src:'rádio'},m))});
+  Object.entries(zas.sh).forEach(([k,m])=>{if(!zas.bg[k])out.set(m.id,Object.assign({k,src:'rádio',ex:!!zas.excl[k]},m))});
   Object.values(zas.scan).forEach(s=>{const r=s.id?out.get(s.id):null;
     if(r){r.src='rádio + štítek';r.raw=s.raw;return}
-    const key=s.id||'?'+s.raw;out.set(key,{k:'S-'+key,id:s.id||'? '+(s.cands||[]).join(' / '),raw:s.raw,src:'štítek',n:0,first:s.t,last:s.t,rl:null,rmax:null,rsum:0,man:'',maker:makerFromCode(s.raw),type:null,ver:null,enc:null,st:null})});
+    const key=s.id||'?'+s.raw;out.set(key,{k:'S-'+key,ex:!!zas.excl['S-'+key],id:s.id||'? '+(s.cands||[]).join(' / '),raw:s.raw,src:'štítek',n:0,first:s.t,last:s.t,rl:null,rmax:null,rsum:0,man:'',maker:makerFromCode(s.raw),type:null,ver:null,enc:null,st:null})});
   return [...out.values()]}
+// --- jistota: modul jen z rádia, který se od zásilky něčím liší, je „k ověření“ ---
+const GRP={0x06:'w',0x07:'w',0x15:'w',0x16:'w',0x04:'h',0x0C:'h',0x0D:'h',0x0A:'h'},GRPN={w:'voda',h:'teplo/chlad'};
+const grpOf=t=>t==null?null:(GRP[t]||'t'+t);
+const grpName=g=>GRPN[g]||typeName(parseInt(String(g).slice(1)));
+const qtl=(a,p)=>a[Math.round(p*(a.length-1))];
+function zasAssess(rows){
+  const radio=rows.filter(m=>m.n>0&&!m.ex);
+  const bgR=Object.values(zas.bg).map(m=>m.rmax).filter(v=>v!=null).sort((a,b)=>a-b),bgRef=bgR.length>=3?qtl(bgR,.9):null;
+  const sr=radio.map(m=>m.rmax).filter(v=>v!=null).sort((a,b)=>a-b),shRef=sr.length>=3?qtl(sr,.5):null;
+  const bgSec=zas.bgEnd>zas.bgStart?(zas.bgEnd-zas.bgStart-outage(zas.bgStart,zas.bgEnd))/1000:0;
+  const dom=f=>{const c={};radio.forEach(m=>{const v=f(m);if(v!=null)c[v]=(c[v]||0)+1});const e=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return e&&radio.length>=3&&e[1]/radio.length>=.6?e[0]:null};
+  const dMan=dom(m=>m.man),dGrp=dom(m=>grpOf(m.type));
+  rows.forEach(m=>{const w=[];
+    if(m.src==='rádio'){   // štítek = fyzicky potvrzený kus
+      if(m.rmax!=null&&((shRef!=null&&m.rmax<shRef-20)||(bgRef!=null&&m.rmax<=bgRef&&(shRef==null||m.rmax<shRef-6))))w.push('slabý signál');
+      if(m.n===1)w.push('jen 1 telegram');
+      else if(m.ivl!=null&&bgSec>0&&m.ivl>bgSec)w.push('vysílá řidčeji, než trvalo rádiové pozadí');
+      if(dMan&&m.man!==dMan)w.push(`jiný výrobce než většina (${manName(dMan)})`);
+      if(dGrp&&grpOf(m.type)!==dGrp)w.push(`jiný typ než většina (${grpName(dGrp)})`);
+    }
+    m.why=w;m.conf=w.length?'chk':'ok'});
+  return rows;
+}
+const candScore=m=>(m.why.includes('slabý signál')?4:0)+(m.why.some(x=>x.startsWith('jiný'))?3:0)+(m.n===1?2:0)+(m.why.length?1:0);
+function zasToggle(k,quiet){const was=!!zas.excl[k];if(was)delete zas.excl[k];else zas.excl[k]=1;zasVer++;saveZas(true);drawZas(true);
+  if(!quiet)toast(was?'Modul vrácen do výsledku.':'Modul vyřazen z výsledku.',{undo:()=>zasToggle(k,true)})}
+function zasTblClick(e){const x=e.target.closest('[data-ex]');if(x){zasToggle(x.dataset.ex);return}zasSortClick(e)}
 const zasExcluded=()=>Object.keys(zas.sh).filter(k=>zas.bg[k]).length;
 const mmss=ms=>{ms=Math.max(0,ms);const s=Math.round(ms/1000);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`};
 function zasTick(){
   const now=Date.now();
   if(zas.phase==='bg'&&now>=zas.bgEnd){zas.phase='gap';saveZas(true);beep(1);vib([200,100,200]);toast('Rádiové pozadí načteno. Přivezte paletu a spusťte načítání zásilky.',{ms:9000})}
-  if(zas.phase==='ship'&&now>=zas.shEnd){zas.phase='done';saveZas(true);beep(1);vib([200,100,200]);toast(`Zásilka načtena: ${pl(zasResult().length,'modul','moduly','modulů')}.`,{ms:9000});zasSort={k:'last',dir:-1}}
+  if(zas.phase==='ship'&&now>=zas.shEnd){zas.phase='done';saveZas(true);beep(1);vib([200,100,200]);toast(`Zásilka načtena: ${pl(zasResult().filter(m=>!m.ex).length,'modul','moduly','modulů')}.`,{ms:9000});zasSort={k:'last',dir:-1}}
   drawZas();
-  if(!$('shBg').hidden&&zas.phase==='bg')openBg();
+  if(!$('shBg').hidden&&zas.phase==='bg'&&$('bgBody')._v!==zasVer)openBg();
 }
 setInterval(zasTick,1000);
-const ZAS_COLS=[['i','#'],['id','rádiové ID'],['src','zdroj'],['man','výrobce'],['type','typ'],['ver','verze'],['enc','šifrování'],['n','telegramů'],['rl','signál'],['rmax','max'],['first','první'],['last','poslední'],['ivl','interval'],['st','hlášení']];
+const ZAS_COLS=[['x',''],['i','#'],['id','rádiové ID'],['conf','jistota'],['src','zdroj'],['man','výrobce'],['type','typ'],['ver','verze'],['enc','šifrování'],['n','telegramů'],['rl','signál'],['rmax','max'],['first','první'],['last','poslední'],['ivl','interval'],['st','hlášení']];
 function zasRows(){
-  const rows=zasResult().map(m=>Object.assign(m,{ivl:m.n>1?Math.round((m.last-m.first)/(m.n-1)/1000):null}));
-  const val=(m,k)=>k==='man'?(manName(m.man)||m.maker||''):k==='type'?typeName(m.type):k==='st'?flagsOf(m.st).join(', '):k==='i'?m.first:m[k];
-  rows.sort((a,b)=>{const x=val(a,zasSort.k),y=val(b,zasSort.k);return ((x??-1e15)>(y??-1e15)?1:(x??-1e15)<(y??-1e15)?-1:0)*zasSort.dir||(b.last-a.last)});
+  const rows=zasAssess(zasResult().map(m=>Object.assign(m,{ivl:m.n>1?Math.round((m.last-m.first)/(m.n-1)/1000):null})));
+  const val=(m,k)=>k==='man'?(manName(m.man)||m.maker||''):k==='type'?typeName(m.type):k==='st'?flagsOf(m.st).join(', '):k==='i'?m.first:k==='conf'?m.why.length:m[k];
+  rows.sort((a,b)=>{const x=val(a,zasSort.k),y=val(b,zasSort.k);return (a.ex-b.ex)||((x??-1e15)>(y??-1e15)?1:(x??-1e15)<(y??-1e15)?-1:0)*zasSort.dir||(b.last-a.last)});   // vyřazené vždy na konci
   return rows;
 }
 // ---- zachycené rádiové pozadí ----
@@ -635,16 +676,18 @@ function bgRows(){
   rows.sort((a,b)=>{const x=val(a,bgSort.k),y=val(b,bgSort.k);return ((x??-1e15)>(y??-1e15)?1:(x??-1e15)<(y??-1e15)?-1:0)*bgSort.dir||(b.last-a.last)});
   return rows;
 }
-function bgCsv(){const cl=v=>String(v??'').replace(/[;\r\n]/g,',');
+// ID a kód ze štítku jako text, aby Excel nesmazal úvodní nuly ani nepřevedl dlouhý kód na 1,2E+13
+const txt=v=>v?{t:String(v)}:'';
+function bgCsv(){const cl=v=>v&&v.t?'="'+v.t.replace(/[;\r\n"]/g,',')+'"':String(v??'').replace(/[;\r\n]/g,',');
   return '\ufeff'+['zakazka;poradi;radiove_id;vyrobce;kod_vyrobce;typ;verze;sifrovani;pocet_telegramu;signal_posledni_dbm;signal_max_dbm;prvni_prijem;posledni_prijem;interval_s;i_v_zasilce',
-    ...bgRows().map((m,i)=>[zas.name,i+1,m.id,manName(m.man),m.man,typeName(m.type),m.ver,encName(m.enc),m.n,m.rl,m.rmax,dtm(new Date(m.first)),dtm(new Date(m.last)),m.ivl??'',m.inz?'ano – vyloučeno':''].map(cl).join(';'))].join('\r\n')}
+    ...bgRows().map((m,i)=>[zas.name,i+1,txt(m.id),manName(m.man),m.man,typeName(m.type),m.ver,encName(m.enc),m.n,m.rl,m.rmax,dtm(new Date(m.first)),dtm(new Date(m.last)),m.ivl??'',m.inz?'ano – vyloučeno':''].map(cl).join(';'))].join('\r\n')}
 function bgTableHtml(){const rows=bgRows();
   return `<table class="tbl"><thead><tr>${BG_COLS.map(([k,t])=>`<th data-sort="${k}" style="cursor:pointer;user-select:none;${k===bgSort.k?'color:var(--ink)':''}">${t}${k===bgSort.k?(bgSort.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
     ${rows.map((m,i)=>`<tr><td>${i+1}</td><td class="mono" style="color:var(--ink)">${m.id}</td><td>${esc(manName(m.man))}</td><td>${esc(typeName(m.type))}</td><td>${m.ver}</td><td>${encName(m.enc)}</td><td>${m.n}</td><td>${m.rl!=null?m.rl+' dBm':'–'}</td><td>${m.rmax!=null?m.rmax+' dBm':'–'}</td><td>${new Date(m.first).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${new Date(m.last).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${m.ivl!=null?m.ivl+' s':'–'}</td><td>${m.inz?'ano – vyloučeno':''}</td></tr>`).join('')}</tbody></table>`}
 function bgSortClick(e){const th=e.target.closest('[data-sort]');if(!th)return;const k=th.dataset.sort;if(k===bgSort.k)bgSort.dir=-bgSort.dir;else bgSort={k,dir:['id','man','type','enc','i'].includes(k)?1:-1};LS('ewrsk_bgsort',bgSort);
   if(!$('shBg').hidden)openBg();const t=$('zBgT');if(t)t.innerHTML=bgTableHtml()}
 function openBg(){
-  const b=$('bgBody'),rows=bgRows(),n=rows.length,running=zas.phase==='bg';
+  const b=$('bgBody'),rows=bgRows(),n=rows.length,running=zas.phase==='bg';b._v=zasVer;
   const sc=b.querySelector('.tscroll'),st=sc?sc.scrollTop:0;
   b.innerHTML=`<div class="phead"><div><div class="eyebrow">rádiové pozadí${running?' · načítá se':''}</div><h2>${pl(n,'modul','moduly','modulů')}</h2></div><button class="iconbtn" data-close aria-label="Zavřít">✕</button></div>
     <div style="font-size:14px;color:var(--muted)">${zas.bgStart?`Načteno ${dtm(new Date(zas.bgStart))}–${new Date(Math.min(Date.now(),zas.bgEnd)).toLocaleTimeString('cs-CZ',{hour12:false})}. `:''}Tyto moduly se z výsledku zásilky vylučují.${zasExcluded()?` Při načítání zásilky se znovu ozvalo ${zasExcluded()}.`:''} Řazení: klepněte na záhlaví sloupce.</div>
@@ -657,15 +700,16 @@ function openBg(){
   if($('shBg').hidden)openSheet('shBg');
 }
 function zasCsv(){
-  const cl=v=>String(v??'').replace(/[;\r\n]/g,',');
-  const rows=zasRows().map((m,i)=>[zas.name,i+1,m.id,m.src,m.raw||'',manName(m.man)||m.maker||'',m.man,typeName(m.type),m.ver??'',m.n?encName(m.enc):'',m.n,m.rl??'',m.rmax??'',(m.rc||m.n)&&m.rl!=null?Math.round(m.rsum/(m.rc||m.n)):'',m.n?dtm(new Date(m.first)):'',m.n?dtm(new Date(m.last)):'',m.ivl??'',flagsOf(m.st).join(', ')].map(cl).join(';'));
-  return '﻿'+['zakazka;poradi;radiove_id;zdroj;kod_ze_stitku;vyrobce;kod_vyrobce;typ;verze;sifrovani;pocet_telegramu;signal_posledni_dbm;signal_max_dbm;signal_prumer_dbm;prvni_prijem;posledni_prijem;interval_s;hlaseni',...rows].join('\r\n');
+  const cl=v=>v&&v.t?'="'+v.t.replace(/[;\r\n"]/g,',')+'"':String(v??'').replace(/[;\r\n]/g,',');
+  const rows=zasRows().filter(m=>!m.ex).map((m,i)=>[zas.name,i+1,txt(m.id),m.conf==='ok'?'jistý':'ověřit',m.why.join(', '),m.src,txt(m.raw),manName(m.man)||m.maker||'',m.man,typeName(m.type),m.ver??'',m.n?encName(m.enc):'',m.n,m.rl??'',m.rmax??'',(m.rc||m.n)&&m.rl!=null?Math.round(m.rsum/(m.rc||m.n)):'',m.n?dtm(new Date(m.first)):'',m.n?dtm(new Date(m.last)):'',m.ivl??'',flagsOf(m.st).join(', ')].map(cl).join(';'));
+  return '﻿'+['zakazka;poradi;radiove_id;jistota;duvod;zdroj;kod_ze_stitku;vyrobce;kod_vyrobce;typ;verze;sifrovani;pocet_telegramu;signal_posledni_dbm;signal_max_dbm;signal_prumer_dbm;prvni_prijem;posledni_prijem;interval_s;hlaseni',...rows].join('\r\n');
 }
 function zasStart(phase){
   if(!connected()){toast('Nejdřív připojte přijímač (EWR-TD nebo USB dongle).',{err:true});connect();return}
   if(devState&&!devState.rx)setRx(true);
   const now=Date.now();
-  if(phase==='bg'){zas.bg={};zas.sh={};zas.gaps=[];zas.bgStart=now;zas.bgEnd=now+zas.bgMin*60000;zas.phase='bg'}
+  zasVer++;
+  if(phase==='bg'){zas.bg={};zas.sh={};zas.gaps=[];zas.excl={};zas.bgStart=now;zas.bgEnd=now+zas.bgMin*60000;zas.phase='bg'}
   else{zas.sh={};zas.shStart=now;zas.shEnd=now+zas.shMin*60000;zas.phase='ship'}
   saveZas(true);drawZas(true);
 }
@@ -674,9 +718,9 @@ function drawZas(force){
   // průběžná aktualizace bez překreslení (aby nepřišlo o klepnutí ani rozepsaný text)
   if(!force&&b.dataset.ph===ph&&b.dataset.conn===String(connected())){
     if(ph==='bg'||ph==='ship'){const end=ph==='bg'?zas.bgEnd:zas.shEnd,st=ph==='bg'?zas.bgStart:zas.shStart;
-      $('zT').textContent=mmss(end-now);$('zM').style.width=Math.min(100,100*(now-st)/(end-st))+'%';$('zC').innerHTML=zasCountHtml(ph,E);
-      if(ph==='ship'&&$('zRes')){const t=$('zRes'),y=t.scrollTop,x=t.scrollLeft;t.innerHTML=zasTableHtml();t.scrollTop=y;t.scrollLeft=x}
-      if(ph==='bg'&&$('zBgT')){const t=$('zBgT'),y=t.scrollTop,x=t.scrollLeft;t.innerHTML=bgTableHtml();t.scrollTop=y;t.scrollLeft=x}}
+      $('zT').textContent=mmss(end-now);$('zM').style.width=Math.min(100,100*(now-st)/(end-st))+'%';
+      const t=$(ph==='ship'?'zRes':'zBgT');
+      if(t&&t._v!==zasVer){const y=t.scrollTop,x=t.scrollLeft;t.innerHTML=ph==='ship'?zasTableHtml():bgTableHtml();t.scrollTop=y;t.scrollLeft=x;t._v=zasVer;setHtml($('zC'),zasCountHtml(ph,E))}}
     return}
   const head=`<div class="phead"><div><div class="eyebrow">zásilka pro zákazníka</div><h2>${esc(zas.name||'nová zásilka')}</h2></div></div>`;
   const steps=`<div class="zsteps">${[['1','rádiové pozadí',['bg'].includes(ph),['gap','ship','done'].includes(ph)],['2','snímání zásilky',ph==='ship',ph==='done'],['3','výsledek',ph==='done',false]].map(([n,t,act,ok])=>`<span class="${act?'act':ok?'ok':''}"><b>${ok?'✓':n}</b>${t}</span>`).join('')}</div>`;
@@ -715,9 +759,12 @@ function drawZas(force){
       <div class="eyebrow">nasnímané měřiče</div>
       <div class="tscroll" id="zRes" style="max-height:46vh">${zasTableHtml()}</div>`;
   }else{
-    const rows=zasRows(),n=rows.length,diff=E?n-E:0;
+    const rows=zasRows(),inc=rows.filter(m=>!m.ex),n=inc.length,diff=E?n-E:0,chk=inc.filter(m=>m.conf==='chk'),nex=rows.length-n;
+    const cand=diff>0?chk.slice().sort((a,b)=>candScore(b)-candScore(a)||(a.rmax??0)-(b.rmax??0)).slice(0,diff):[];
     body=`<div class="zbig"><b>${n}</b><span>${pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky${E?` · očekáváno ${E}`:''}</span></div>
-      ${E&&diff!==0?`<div class="${diff<0?'errbox':'warnbox'}">${diff<0?`Chybí ${-diff} – některé moduly nevysílaly nebo byly i v rádiovém pozadí. Prodlužte načítání nebo zkontrolujte paletu.`:`O ${diff} víc, než se čekalo – v dosahu mohla být i jiná měřidla. Zkontrolujte moduly s jedním telegramem a slabým signálem.`}</div>`:E?'<div class="okbox">Počet souhlasí s objednávkou.</div>':''}
+      ${E&&diff!==0?`<div class="${diff<0?'errbox':'warnbox'}">${diff<0?`Chybí ${-diff} – některé moduly nevysílaly nebo byly i v rádiovém pozadí. Prodlužte načítání nebo zkontrolujte paletu.`:`O ${diff} víc, než se čekalo – v dosahu mohla být i jiná měřidla.${cand.length?' Níže jsou moduly, které se od zásilky nejvíc liší.':''}`}</div>`:E?'<div class="okbox">Počet souhlasí s objednávkou.</div>':''}
+      ${cand.length?`<div class="warnbox" id="zCand"><b>Navrženo k vyřazení (${cand.length})</b>${cand.map(m=>`<div class="zc"><span class="mono">${esc(m.id)}</span><span>${esc(m.why.join(', '))}</span><button class="xb" data-ex="${esc(m.k)}">vyřadit</button></div>`).join('')}<button class="btn sm" id="zExAll" style="margin-top:8px">vyřadit všechny navržené</button></div>`:''}
+      ${chk.length||nex?`<div style="font-size:14px;color:var(--ink)">${chk.length?`<span class="chk">${pl(chk.length,'modul','moduly','modulů')} k ověření</span> – důvod je ve sloupci jistota. `:''}${nex?`Ručně vyřazeno: ${nex}. `:''}Modul vyřadíte nebo vrátíte tlačítkem ✕ na začátku řádku.</div>`:''}
       ${(()=>{const os=outage(zas.shStart,zas.shEnd),ob=outage(zas.bgStart,zas.bgEnd);return os||ob?`<div class="warnbox">${os?`Během snímání zásilky byl přijímač ${mmss(os)} min odpojen. Výsledek může být neúplný – doporučuji „načítat zásilku znovu“.`:''} ${ob?`Rádiové pozadí nebylo snímáno ${mmss(ob)} min, některé moduly z okolí se mohou objevit v zásilce navíc.`:''}</div>`:''})()}
       <div style="font-size:13px;color:var(--muted)">Rádiové pozadí: ${pl(Object.keys(zas.bg).length,'modul','moduly','modulů')} · vyloučeno ${zasExcluded()} · načítání ${dtm(new Date(zas.shStart))}–${new Date(zas.shEnd).toLocaleTimeString('cs-CZ',{hour12:false})}. Řazení: klepněte na záhlaví sloupce.</div>
       <div class="tscroll" id="zRes">${zasTableHtml(rows)}</div>
@@ -736,75 +783,111 @@ function drawZas(force){
   on('zEnd',()=>{if(zas.phase==='bg')zas.bgEnd=Date.now();else zas.shEnd=Date.now();zasTick()});
   on('zBgView',openBg);if($('zBgT'))$('zBgT').onclick=bgSortClick;
   on('zMore',()=>{if(!confirm('Načíst zásilku znovu? Dosavadní výsledek se nahradí, rádiové pozadí zůstane.'))return;zasStart('ship')});
-  on('zReset',()=>{if(!confirm('Zrušit načítání a začít znovu? Naměřená data se smažou.'))return;zas=Object.assign({},ZAS0,{name:zas.name,expected:zas.expected,bgMin:zas.bgMin,shMin:zas.shMin,bg:{},sh:{},scan:{}});saveZas(true);drawZas(true)});
+  on('zReset',()=>{if(!confirm('Zrušit načítání a začít znovu? Naměřená data se smažou.'))return;zas=Object.assign({},ZAS0,{name:zas.name,expected:zas.expected,bgMin:zas.bgMin,shMin:zas.shMin,bg:{},sh:{},scan:{},gaps:[],excl:{}});zasVer++;saveZas(true);drawZas(true)});
+  if($('zCand'))$('zCand').onclick=e=>{const x=e.target.closest('[data-ex]');if(x)zasToggle(x.dataset.ex)};
+  on('zExAll',()=>{const ks=[...$('zCand').querySelectorAll('[data-ex]')].map(b=>b.dataset.ex);ks.forEach(k=>zas.excl[k]=1);zasVer++;saveZas(true);drawZas(true);
+    toast(`Vyřazeno ${pl(ks.length,'modul','moduly','modulů')}.`,{undo:()=>{ks.forEach(k=>delete zas.excl[k]);zasVer++;saveZas(true);drawZas(true)}})});
   on('zCsv',()=>shareCsv(fname('zasilka_'+(zas.name||'radio')),zasCsv(),'Zásilka '+zas.name));
-  if($('zRes'))$('zRes').onclick=zasSortClick;
+  if($('zRes'))$('zRes').onclick=zasTblClick;
 }
 function zasTableHtml(rows){rows=rows||zasRows();return `<table class="tbl"><thead><tr>${ZAS_COLS.map(([k,t])=>`<th data-sort="${k}" style="cursor:pointer;user-select:none;${k===zasSort.k?'color:var(--ink)':''}">${t}${k===zasSort.k?(zasSort.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
-      ${rows.map((m,i)=>`<tr${m.n===1?' style="color:var(--muted)"':''}><td>${i+1}</td><td class="mono" style="color:var(--ink)">${m.id}</td><td>${m.src}</td><td>${esc(manName(m.man)||m.maker||'')}</td><td>${esc(typeName(m.type))}</td><td>${m.ver??'–'}</td><td>${m.n?encName(m.enc):'–'}</td><td>${m.n}</td><td>${m.rl!=null?m.rl+' dBm':'–'}</td><td>${m.rmax!=null?m.rmax+' dBm':'–'}</td><td>${new Date(m.first).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${new Date(m.last).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${m.ivl!=null?m.ivl+' s':'–'}</td><td>${esc(flagsOf(m.st).join(', '))}</td></tr>`).join('')}</tbody></table>`}
-function zasSortClick(e){const th=e.target.closest('[data-sort]');if(!th)return;const k=th.dataset.sort;if(k===zasSort.k)zasSort.dir=-zasSort.dir;else zasSort={k,dir:['id','man','type','enc','st','i','src'].includes(k)?1:-1};LS('ewrsk_zassort',zasSort);const t=$('zRes');if(t)t.innerHTML=zasTableHtml()}
+      ${rows.map((m,i)=>`<tr${m.ex?' class="ex"':m.n===1?' style="color:var(--muted)"':''}><td><button class="xb" data-ex="${esc(m.k)}" aria-label="${m.ex?'vrátit do výsledku':'vyřadit z výsledku'}">${m.ex?'vrátit':'✕'}</button></td><td>${m.ex?'–':i+1}</td><td class="mono" style="color:var(--ink)">${esc(m.id)}</td><td>${m.ex?'vyřazeno':m.conf==='ok'?'<span style="color:var(--ok)">✓</span>':'<span class="chk">ověřit</span> '+esc(m.why.join(', '))}</td><td>${m.src}</td><td>${esc(manName(m.man)||m.maker||'')}</td><td>${esc(typeName(m.type))}</td><td>${m.ver??'–'}</td><td>${m.n?encName(m.enc):'–'}</td><td>${m.n}</td><td>${m.rl!=null?m.rl+' dBm':'–'}</td><td>${m.rmax!=null?m.rmax+' dBm':'–'}</td><td>${new Date(m.first).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${new Date(m.last).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${m.ivl!=null?m.ivl+' s':'–'}</td><td>${esc(flagsOf(m.st).join(', '))}</td></tr>`).join('')}</tbody></table>`}
+function zasSortClick(e){const th=e.target.closest('[data-sort]');if(!th||th.dataset.sort==='x')return;const k=th.dataset.sort;if(k===zasSort.k)zasSort.dir=-zasSort.dir;else zasSort={k,dir:['id','man','type','enc','st','i','src'].includes(k)?1:-1};LS('ewrsk_zassort',zasSort);const t=$('zRes');if(t){t.innerHTML=zasTableHtml();t._v=zasVer}}
 const hhmm=t=>new Date(t).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
 function zasCountHtml(ph,E){if(ph==='bg'){const n=Object.keys(zas.bg).length;return `<b>${n}</b> ${pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} v rádiovém pozadí (vyloučí se)`}
-  const n=zasResult().length,ns=Object.keys(zas.scan).length;return `<b>${n}</b>${E?` z ${E} očekávaných modulů`:' '+pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky · ${zasExcluded()} vyloučeno (rádiové pozadí)${ns?' · '+pl(ns,'štítek','štítky','štítků'):''}`+(E&&n>=E?'<div class="okbox" style="margin-top:8px">Nalezen očekávaný počet. Můžete ukončit dříve, nebo nechat doběhnout.</div>':'')}
+  const rs=zasRows(),inc=rs.filter(m=>!m.ex),n=inc.length,nc=inc.filter(m=>m.conf==='chk').length,ns=Object.keys(zas.scan).length;return `<b>${n}</b>${E?` z ${E} očekávaných modulů`:' '+pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky · ${zasExcluded()} vyloučeno (rádiové pozadí)${ns?' · '+pl(ns,'štítek','štítky','štítků'):''}${nc?` · <span class="chk">${nc} k ověření</span>`:''}`+(E&&n>=E?'<div class="okbox" style="margin-top:8px">Nalezen očekávaný počet. Můžete ukončit dříve, nebo nechat doběhnout.</div>':'')}
 function zasLiveList(){return zasResult().sort((a,b)=>b.last-a.last).slice(0,40).map(m=>`<div class="li" style="font-size:14px"><span class="mono" style="color:var(--ink)">${m.id}</span><span style="flex:1;color:var(--muted)">${esc(manName(m.man)||m.maker||'')}${m.type!=null?' · '+esc(typeName(m.type)):''}</span><span>${m.rl!=null?m.rl+' dBm':m.src}</span></div>`).join('')}
 
 
 // ================= USB dongle (Radiocrafts RC1180-MBUS přes FTDI) =================
 // Počítač: Web Serial (ovladač v systému). Android: WebUSB s vlastním ovladačem FTDI.
 // Formát z modulu: [L][L bajtů telegramu bez CRC] a volitelně 1 bajt RSSI (RSSI_MODE), dBm = −RSSI/2.
-let dg=null,dgBuf=[],dgLast=0;
+let dg=null,dgBuf=[],dgT=null,dgAuto={r:0,n:0},dgBytesAt=0,dgOkAt=0,dgConnAt=0,dgWarnAt=0,dgPrev=null,dgReT=null;
 const dgOn=()=>!!(dg&&dg.open);
 const isAndroid=/Android/i.test(navigator.userAgent);
 function ftdiDiv(baud){const d8=Math.round(3000000*8/baud);let n=d8>>3;const f=[0,3,2,4,1,5,6,7][d8&7];if(n===1&&!f)n=0;const e=n|(f<<14);return{value:e&0xFFFF,index:(e>>16)&0xFFFF}}
-function dgFeed(bytes){
-  const now=Date.now();if(dgBuf.length&&now-dgLast>400)dgBuf=[];dgLast=now;   // nedokončený zbytek starší než 0,4 s zahodit
-  for(const b of bytes)dgBuf.push(b);
-  while(dgBuf.length){
-    const L=dgBuf[0];if(L<10){dgBuf.shift();continue}
-    const need=1+L+(settings.dgRssi?1:0);if(dgBuf.length<need)break;
-    const fr=Uint8Array.from(dgBuf.splice(0,need));let rssi=null,f=fr;
-    if(settings.dgRssi){rssi=-Math.round(fr[need-1]/2);f=fr.slice(0,need-1)}
-    const o=handleTelegram(f,rssi);
-    if(o&&o.bad){dgBuf=[];if(devState)devState.crc++;break}else if(devState)devState.ok++;
+// Telegram přijde jako souvislý blok bajtů. Blok se zpracuje po 80 ms ticha.
+// RSSI bajt se pozná sám: blok má délku 1+L (bez RSSI), nebo 2+L (s RSSI).
+const dgRssiMode=()=>dgAuto.n>=3?dgAuto.r*2>dgAuto.n:!!settings.dgRssi;
+function dgFeed(bytes){for(const b of bytes)dgBuf.push(b);dgBytesAt=Date.now();clearTimeout(dgT);if(dgBuf.length>4096)dgBurst();else dgT=setTimeout(dgBurst,80)}
+function dgBurst(){
+  const b=dgBuf;dgBuf=[];let p=0;
+  while(p<b.length){
+    const L=b[p];if(L<10){p++;continue}
+    const rest=b.length-p;if(rest<1+L)break;   // neúplný telegram – zahodit
+    const single=rest===1+L||rest===2+L,hasR=single?rest===2+L:dgRssiMode();
+    const f=Uint8Array.from(b.slice(p,p+1+L)),rssi=hasR&&p+1+L<b.length?-Math.round(b[p+1+L]/2):null;p+=1+L+(hasR?1:0);
+    const o=handleTelegram(f,rssi);if(!o)continue;
+    if(o.bad){if(devState)devState.crc++;break}
+    if(devState)devState.ok++;dgOkAt=Date.now();
+    if(single){dgAuto.n++;if(hasR)dgAuto.r++;if(dgAuto.n>=3&&settings.dgRssi!==dgRssiMode()){settings.dgRssi=dgRssiMode();LS('ewrsk_settings',settings)}}
   }
 }
+// data chodí, ale žádný platný telegram → nejspíš špatná rychlost nebo režim modulu
+setInterval(()=>{if(!dgOn())return;const now=Date.now();
+  if(now-dgBytesAt<30000&&now-Math.max(dgOkAt,dgConnAt)>60000&&now-dgWarnAt>60000){dgWarnAt=now;toast('Z donglu chodí data, ale žádný platný telegram. Zkontrolujte rychlost (Bd) v menu ⋮ a režim modulu.',{err:true,ms:10000})}},5000);
+async function dgOpenSerial(port){
+  await port.open({baudRate:settings.baud||19200,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
+  const i=port.getInfo?port.getInfo():{},me={kind:'serial',port,open:true,name:'USB dongle'+(i.usbVendorId?` ${i.usbVendorId.toString(16).padStart(4,'0')}:${(i.usbProductId||0).toString(16).padStart(4,'0')}`:'')};
+  dg=me;dgPrev={kind:'serial',vid:i.usbVendorId,pid:i.usbProductId};
+  (async()=>{while(me.open&&port.readable){let r;try{r=port.readable.getReader()}catch(e){break}me.reader=r;
+    try{for(;;){const {value,done}=await r.read();if(done)break;if(value)dgFeed(value)}}catch(e){}finally{try{r.releaseLock()}catch(e){}}
+    if(me.open)await sleep(300)}})();
+}
+async function dgOpenUsb(d){
+  await d.open();if(d.configuration===null)await d.selectConfiguration(1);
+  const itf=d.configuration.interfaces[0];await d.claimInterface(itf.interfaceNumber);
+  const eps=itf.alternate.endpoints,epIn=eps.find(e=>e.direction==='in'),pk=(epIn&&epIn.packetSize)||64;
+  const idx=itf.interfaceNumber?itf.interfaceNumber+1:0;
+  const ctl=(req,val,ix=idx)=>d.controlTransferOut({requestType:'vendor',recipient:'device',request:req,value:val,index:ix});
+  const b=ftdiDiv(settings.baud||19200);
+  await ctl(0x00,0);await ctl(0x03,b.value,b.index|(idx<<8));await ctl(0x04,0x0008);await ctl(0x02,0);await ctl(0x01,0x0303);await ctl(0x09,16);
+  const me={kind:'usb',device:d,open:true,name:'USB dongle '+(d.productName||'FTDI')};
+  dg=me;dgPrev={kind:'usb',sn:d.serialNumber||''};
+  (async()=>{while(me.open){try{const r=await d.transferIn(epIn.endpointNumber,pk*8);
+      if(r.data&&r.data.byteLength){const u=new Uint8Array(r.data.buffer,r.data.byteOffset,r.data.byteLength),out=[];for(let i=0;i<u.length;i+=pk)for(let j=i+2;j<Math.min(i+pk,u.length);j++)out.push(u[j]);if(out.length)dgFeed(out)}}
+    catch(e){if(me.open)dgClose(false);break}}})();
+}
+function dgStarted(again){
+  dgBuf=[];gapEnd();devState={t:new Date(),bat:null,mode:null,rx:true,dongle:true,ok:0,crc:0,bit:0,fw:null,hw:null};rxSince=new Date();dgConnAt=Date.now();dgOkAt=0;settings.link='usb';LS('ewrsk_settings',settings);
+  toast(again?'USB dongle znovu připojen, snímání pokračuje.':`${dg.name} připojen, ${settings.baud||19200} Bd. Přijímá v režimu nastaveném v modulu.`,{ms:6000});setTop();drawZas(true);
+}
 async function connectDongle(){
-  closeSheets();
-  const baud=settings.baud||19200;
+  closeSheets();clearTimeout(dgReT);
   try{
-    if(navigator.serial&&!(isAndroid&&navigator.usb)){
-      const port=await navigator.serial.requestPort();
-      await port.open({baudRate:baud,dataBits:8,stopBits:1,parity:'none',flowControl:'none'});
-      dg={kind:'serial',port,open:true,name:'USB dongle'};
-      const i=port.getInfo?port.getInfo():{};if(i.usbVendorId)dg.name+=` ${i.usbVendorId.toString(16).padStart(4,'0')}:${(i.usbProductId||0).toString(16).padStart(4,'0')}`;
-      (async()=>{while(dg&&dg.open&&port.readable){const r=port.readable.getReader();dg.reader=r;
-        try{for(;;){const {value,done}=await r.read();if(done)break;if(value)dgFeed(value)}}catch(e){}finally{try{r.releaseLock()}catch(e){}}
-        if(dg&&dg.open){await sleep(300)}}})();
-    }else if('usb' in navigator){
-      const d=await navigator.usb.requestDevice({filters:[{vendorId:0x0403}]});
-      await d.open();if(d.configuration===null)await d.selectConfiguration(1);
-      const itf=d.configuration.interfaces[0];await d.claimInterface(itf.interfaceNumber);
-      const eps=itf.alternate.endpoints,epIn=eps.find(e=>e.direction==='in'),pk=(epIn&&epIn.packetSize)||64;
-      const idx=itf.interfaceNumber?itf.interfaceNumber+1:0;
-      const ctl=(req,val,ix=idx)=>d.controlTransferOut({requestType:'vendor',recipient:'device',request:req,value:val,index:ix});
-      const b=ftdiDiv(baud);
-      await ctl(0x00,0);await ctl(0x03,b.value,b.index|(idx<<8));await ctl(0x04,0x0008);await ctl(0x02,0);await ctl(0x01,0x0303);await ctl(0x09,16);
-      dg={kind:'usb',device:d,open:true,name:'USB dongle '+(d.productName||'FTDI')};
-      (async()=>{while(dg&&dg.open){try{const r=await d.transferIn(epIn.endpointNumber,pk*8);
-          if(r.data&&r.data.byteLength){const u=new Uint8Array(r.data.buffer,r.data.byteOffset,r.data.byteLength),out=[];for(let i=0;i<u.length;i+=pk)for(let j=i+2;j<Math.min(i+pk,u.length);j++)out.push(u[j]);if(out.length)dgFeed(out)}}
-        catch(e){if(dg&&dg.open){dgClose(false);toast('USB dongle se odpojil.',{err:true,ms:7000})}break}}})();
-    }else{showConnErr('Tento prohlížeč neumí USB. Použijte Chrome (Android, PC) nebo Edge (PC).');return}
-    dgBuf=[];gapEnd();devState={t:new Date(),bat:null,mode:null,rx:true,dongle:true,ok:0,crc:0,bit:0,fw:null,hw:null};rxSince=new Date();settings.link='usb';LS('ewrsk_settings',settings);
-    toast(`${dg.name} připojen, ${baud} Bd. Přijímá v režimu nastaveném v modulu.`,{ms:6000});setTop();drawZas(true);
+    if(navigator.serial&&!(isAndroid&&navigator.usb))await dgOpenSerial(await navigator.serial.requestPort());
+    else if('usb' in navigator)await dgOpenUsb(await navigator.usb.requestDevice({filters:[{vendorId:0x0403}]}));
+    else{showConnErr('Tento prohlížeč neumí USB. Použijte Chrome (Android, PC) nebo Edge (PC).');return}
+    dgStarted(false);
   }catch(e){if(e.name==='NotFoundError'){setTop();return}dg=null;showConnErr(e.message||String(e))}
 }
 async function dgClose(manual){
-  const d=dg;if(!d)return;d.open=false;dg=null;devState=null;rxSince=null;
+  const d=dg;if(!d)return;d.open=false;dg=null;devState=null;rxSince=null;clearTimeout(dgT);dgBuf=[];
   try{if(d.kind==='serial'){try{d.reader&&await d.reader.cancel()}catch(e){}await d.port.close()}else{await d.device.close()}}catch(e){}
-  if(manual)toast('USB dongle odpojen.');else gapStart();setTop();drawZas(true);
+  if(manual){dgPrev=null;clearTimeout(dgReT);toast('USB dongle odpojen.')}
+  else{gapStart();toast('USB dongle se odpojil. Zkouším ho znovu připojit…',{err:true,ms:8000});dgReconnect()}
+  setTop();drawZas(true);
 }
-if(navigator.serial)navigator.serial.addEventListener('disconnect',e=>{if(dg&&dg.kind==='serial'&&e.target===dg.port){dgClose(false);toast('USB dongle se odpojil.',{err:true,ms:7000})}});
-if(navigator.usb)navigator.usb.addEventListener('disconnect',e=>{if(dg&&dg.kind==='usb'&&e.device===dg.device){dgClose(false);toast('USB dongle se odpojil.',{err:true,ms:7000})}});
+// automatické obnovení: dříve povolené zařízení jde otevřít bez dotazu; během snímání bez omezení, jinak 2 minuty
+function dgReconnect(){
+  clearTimeout(dgReT);const t0=Date.now();
+  const tryOnce=async()=>{if(!dgPrev||connected())return;
+    const busy=zas.phase==='bg'||zas.phase==='ship';if(!busy&&Date.now()-t0>120000)return;
+    try{
+      if(dgPrev.kind==='serial'&&navigator.serial){const ps=await navigator.serial.getPorts();
+        const p=ps.find(x=>{const i=x.getInfo?x.getInfo():{};return i.usbVendorId===dgPrev.vid&&i.usbProductId===dgPrev.pid})||(ps.length===1?ps[0]:null);
+        if(p){await dgOpenSerial(p);dgStarted(true);return}}
+      else if(dgPrev.kind==='usb'&&navigator.usb){const ds=await navigator.usb.getDevices();
+        const d=ds.find(x=>x.vendorId===0x0403&&(!dgPrev.sn||x.serialNumber===dgPrev.sn));
+        if(d){await dgOpenUsb(d);dgStarted(true);return}}
+    }catch(e){if(dg&&!dg.open)dg=null}
+    dgReT=setTimeout(tryOnce,3000)};
+  dgReT=setTimeout(tryOnce,1500);
+}
+if(navigator.serial){navigator.serial.addEventListener('disconnect',e=>{if(dg&&dg.kind==='serial'&&e.target===dg.port)dgClose(false)});
+  navigator.serial.addEventListener('connect',()=>{if(dgPrev&&!connected())dgReconnect()})}
+if(navigator.usb){navigator.usb.addEventListener('disconnect',e=>{if(dg&&dg.kind==='usb'&&e.device===dg.device)dgClose(false)});
+  navigator.usb.addEventListener('connect',()=>{if(dgPrev&&!connected())dgReconnect()})}
 
 // ================= start =================
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
