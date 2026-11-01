@@ -183,7 +183,10 @@ main .wrap{padding:8px 16px 150px}
 .zmeter{height:8px;background:var(--b1)}.zmeter i{display:block;height:100%;background:var(--red);transition:width .9s linear}
 .zcount{font-size:16px;color:var(--body)}.zcount b{font-size:22px;color:var(--ink)}
 .xb{min-width:34px;height:30px;padding:0 8px;font-family:inherit;border:1px solid var(--b3);background:#fff;color:var(--ink);font-size:13px;cursor:pointer}
-.chk{color:#8a5a00;font-weight:700}.tbl tr.ex td{color:var(--faint);text-decoration:line-through}.tbl tr.ex td:first-child{text-decoration:none}
+.chk{color:#8a5a00;font-weight:700}
+.ztbl tr.sus td{background:#fff3d6}.ztbl tr.hn td{border-bottom:0}.ztbl tr.note td{padding:0 8px 8px;white-space:normal}
+.ztbl tr.note div{position:sticky;left:8px;max-width:calc(100vw - 64px);font-size:13px;line-height:1.35;color:var(--muted)}.ztbl tr.note.sus div{color:#7a4f00}
+.stag{font-family:var(--font);font-size:11px;padding:1px 5px;margin-left:4px;background:var(--b1);color:var(--muted);white-space:nowrap}.tbl tr.ex td{color:var(--faint);text-decoration:line-through}.tbl tr.ex td:first-child{text-decoration:none}
 #zCand .zc{display:flex;gap:8px;align-items:center;margin-top:6px}#zCand .zc span:nth-child(2){flex:1;font-size:13px}
 .okbox{background:#e8f6ee;border:1px solid #b9e3c9;color:#145c35;padding:10px 12px;font-size:15px}
 .zmain{display:grid;gap:12px;padding-top:14px!important}
@@ -248,7 +251,7 @@ main .wrap{padding:8px 16px 150px}
     <div class="li"><span><b>1. Rádiové pozadí.</b> Prázdný kontejner, výchozí 10 minut. Moduly zachycené teď se z výsledku vyloučí.</span></div>
     <div class="li"><span><b>2. Zásilka.</b> Přivezte paletu pro zákazníka a spusťte načítání, výchozí 30 minut. Moduly vysílají zhruba jednou za minutu.</span></div>
     <div class="li"><span><b>Štítky.</b> Kód, který jde přečíst (QR, čárový, DataMatrix), naskenujte tlačítkem dole. Doplní se do výsledku, i když modul nevysílá.</span></div>
-    <div class="li"><span><b>Jistota.</b> Modul zachycený jen rádiem je „k ověření“, když má slabý signál, jen jeden telegram, vysílá řidčeji, než trvalo rádiové pozadí, nebo je jiného výrobce či typu než většina zásilky. Křížkem ✕ na začátku řádku ho vyřadíte z výsledku i z tabulky, tlačítkem „vrátit“ ho vrátíte.</span></div>
+    <div class="li"><span><b>Podezřelé moduly.</b> Modul zachycený jen rádiem se zvýrazní žlutě a pod řádkem je důvod: vysílá výrazně slaběji než ostatní, zachycen jen 1 telegram, vysílá tak řídce, že mohl uniknout při snímání pozadí, nebo je jiného výrobce či typu než zakázka (když je zadaný), případně než většina silně vysílajících modulů. Křížkem ✕ na začátku řádku modul vyřadíte, tlačítkem „vrátit“ ho vrátíte.</span></div>
     <div class="li"><span><b>Nesedí počet.</b> Méně: prodlužte načítání (načítat znovu). Víc: aplikace navrhne moduly, které se od zásilky nejvíc liší, a můžete je vyřadit.</span></div>
     <div class="li"><span><b>Telefon.</b> Nechte aplikaci otevřenou s rozsvíceným displejem. Prohlížeč: Chrome na Androidu a počítači, Edge na počítači, na iPhonu Bluefy.</span></div>
     <div class="li"><span><b>USB dongle.</b> Radiocrafts RC1180-MBUS s převodníkem FTDI. V telefonu přes USB-C OTG redukci (Chrome povolí přístup k zařízení), v počítači přímo (Chrome nebo Edge). Výchozí rychlost 19200 Bd. Zda modul posílá i sílu signálu (RSSI), aplikace pozná sama. Když se kabel uvolní, dongle se po zasunutí připojí znovu sám.</span></div>
@@ -275,8 +278,8 @@ const MEDIUM={0x02:'elektřina',0x03:'plyn',0x04:'teplo',0x06:'TUV',0x07:'voda',
 const MAN={APA:'Apator',KAM:'Kamstrup',DME:'Diehl',HYD:'Diehl',QDS:'Qundis',SON:'Sontex',LSE:'Siemens',ITW:'Itron',SEN:'Sensus',BMT:'B METERS',ZRI:'Zenner',ZRM:'Zenner',EFE:'Engelmann',TCH:'Techem',IST:'ista',LUG:'Landis+Gyr',ELS:'Elster',MAD:'Maddalena',AMT:'Aquametro',WEH:'Wehrle'};
 const typeName=t=>t==null?'':(MEDIUM[t]||'typ 0x'+h2(t));
 const manName=m=>m?(MAN[m]||m):'';
-const APP_VER='1.0';    // verze pro uživatele (menu, poslední řádek)
-const APP_BUILD=17;   // interní číslo sestavení – posílá se s předávanými záznamy kvůli kompatibilitě
+const APP_VER='1.1';    // verze pro uživatele (menu, poslední řádek)
+const APP_BUILD=18;   // interní číslo sestavení – posílá se s předávanými záznamy kvůli kompatibilitě
 const WAIT_MIN=10;   // po kolika minutách bez vysílání je měřidlo „problém“
 
 
@@ -597,7 +600,7 @@ const hashc=s=>{let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))|0;retu
 
 // ================= načtení zásilky rádiem: pozadí → zásilka → rozdíl =================
 // Fáze: setup → bg (pozadí) → gap (přivézt paletu) → ship (zásilka) → done
-const ZAS0={name:'',expected:'',bgMin:10,shMin:30,phase:'setup',bgStart:0,bgEnd:0,shStart:0,shEnd:0,bg:{},sh:{},scan:{},gaps:[],excl:{}};
+const ZAS0={name:'',expected:'',bgMin:10,shMin:30,phase:'setup',bgStart:0,bgEnd:0,shStart:0,shEnd:0,bg:{},sh:{},scan:{},gaps:[],excl:{},expMan:'',expKind:''};
 let zas=Object.assign({},ZAS0,LS('ewrsk_zas')||{});if(!zas.scan)zas.scan={};if(!zas.gaps)zas.gaps=[];if(!zas.excl)zas.excl={};
 let zasVer=0;   // zvýší se při každé změně dat → tabulky se překreslí jen tehdy
 const setHtml=(el,h)=>{if(el&&el._h!==h){el.innerHTML=h;el._h=h}};
@@ -623,30 +626,42 @@ function zasResult(){const out=new Map();
     if(r){r.src='rádio + štítek';r.raw=s.raw;return}
     const key=s.id||'?'+s.raw;out.set(key,{k:'S-'+key,ex:!!zas.excl['S-'+key],id:s.id||'? '+(s.cands||[]).join(' / '),raw:s.raw,src:'štítek',n:0,first:s.t,last:s.t,rl:null,rmax:null,rsum:0,man:'',maker:makerFromCode(s.raw),type:null,ver:null,enc:null,st:null})});
   return [...out.values()]}
-// --- jistota: modul jen z rádia, který se od zásilky něčím liší, je „k ověření“ ---
+// --- podezřelé moduly: zachycené jen rádiem a něčím se liší od zásilky ---
 const GRP={0x06:'w',0x07:'w',0x15:'w',0x16:'w',0x04:'h',0x0C:'h',0x0D:'h',0x0A:'h'},GRPN={w:'voda',h:'teplo/chlad'};
 const grpOf=t=>t==null?null:(GRP[t]||'t'+t);
 const grpName=g=>GRPN[g]||typeName(parseInt(String(g).slice(1)));
+const MANS=[...new Set(Object.values(MAN))].sort((a,b)=>a.localeCompare(b,'cs'));
+const KINDS=[['',''],['w','voda (studená i teplá)'],['sv','studená voda'],['tv','teplá voda'],['h','teplo / chlad'],['t8','rozdělovač topných nákladů']];
+const kindName=k=>(KINDS.find(x=>x[0]===k)||['',''])[1];
+// typ z telegramu odpovídá druhu ze zakázky? obecná „voda“ (0x07) vyhovuje SV i TV
+function kindOk(k,t){if(!k||t==null)return true;const g=grpOf(t);
+  return k==='w'?g==='w':k==='sv'?g==='w'&&t!==0x06&&t!==0x15:k==='tv'?g==='w'&&t!==0x16:k==='h'?g==='h':k==='t8'?t===0x08:true}
 const qtl=(a,p)=>a[Math.round(p*(a.length-1))];
+const ivlTxt=s=>s>=90?Math.round(s/60)+' min':s+' s';
 function zasAssess(rows){
   const radio=rows.filter(m=>m.n>0&&!m.ex);
   const bgR=Object.values(zas.bg).map(m=>m.rmax).filter(v=>v!=null).sort((a,b)=>a-b),bgRef=bgR.length>=3?qtl(bgR,.9):null;
   const sr=radio.map(m=>m.rmax).filter(v=>v!=null).sort((a,b)=>a-b),shRef=sr.length>=3?qtl(sr,.5):null;
   const bgSec=zas.bgEnd>zas.bgStart?(zas.bgEnd-zas.bgStart-outage(zas.bgStart,zas.bgEnd))/1000:0;
-  const dom=f=>{const c={};radio.forEach(m=>{const v=f(m);if(v!=null)c[v]=(c[v]||0)+1});const e=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return e&&radio.length>=3&&e[1]/radio.length>=.6?e[0]:null};
-  const dMan=dom(m=>m.man),dGrp=dom(m=>grpOf(m.type));
-  rows.forEach(m=>{const w=[];
+  // převládající výrobce a typ určují jen silně vysílající moduly (ty jsou na paletě)
+  const strong=radio.filter(m=>m.rmax==null||shRef==null||m.rmax>=shRef-10);
+  const dom=f=>{const c={};strong.forEach(m=>{const v=f(m);if(v!=null)c[v]=(c[v]||0)+1});const e=Object.entries(c).sort((a,b)=>b[1]-a[1])[0];return e&&strong.length>=3&&e[1]/strong.length>=.6?e[0]:null};
+  const dMan=zas.expMan?null:dom(m=>m.man),dGrp=zas.expKind?null:dom(m=>grpOf(m.type));
+  rows.forEach(m=>{const w=[],c=[];const add=(k,t)=>{c.push(k);w.push(t)};
     if(m.src==='rádio'){   // štítek = fyzicky potvrzený kus
-      if(m.rmax!=null&&((shRef!=null&&m.rmax<shRef-20)||(bgRef!=null&&m.rmax<=bgRef&&(shRef==null||m.rmax<shRef-6))))w.push('slabý signál');
-      if(m.n===1)w.push('jen 1 telegram');
-      else if(m.ivl!=null&&bgSec>0&&m.ivl>bgSec)w.push('vysílá řidčeji, než trvalo rádiové pozadí');
-      if(dMan&&m.man!==dMan)w.push(`jiný výrobce než většina (${manName(dMan)})`);
-      if(dGrp&&grpOf(m.type)!==dGrp)w.push(`jiný typ než většina (${grpName(dGrp)})`);
+      if(m.rmax!=null&&shRef!=null&&m.rmax<shRef-20)add('weak',`vysílá příliš slabě (${m.rmax} dBm, ostatní kolem ${shRef} dBm)`);
+      else if(m.rmax!=null&&bgRef!=null&&m.rmax<=bgRef&&(shRef==null||m.rmax<shRef-6))add('weak',`signál slabý jako u rádiového pozadí (${m.rmax} dBm)`);
+      if(m.n===1)add('one','zachycen jen 1 telegram');
+      else if(m.ivl!=null&&bgSec>0&&m.ivl>bgSec)add('ivl',`vysílá jen jednou za ${ivlTxt(m.ivl)} – mohl uniknout při snímání rádiového pozadí`);
+      if(zas.expMan&&manName(m.man)!==zas.expMan)add('man',`jiný výrobce (${manName(m.man)}) než v zakázce (${zas.expMan})`);
+      else if(dMan&&m.man!==dMan)add('man',`jiný výrobce (${manName(m.man)}) než většina silně vysílajících (${manName(dMan)})`);
+      if(zas.expKind&&!kindOk(zas.expKind,m.type))add('type',`jiný typ (${typeName(m.type)}) než v zakázce (${kindName(zas.expKind)})`);
+      else if(dGrp&&grpOf(m.type)!==dGrp)add('type',`jiný typ (${typeName(m.type)}) než většina silně vysílajících (${grpName(dGrp)})`);
     }
-    m.why=w;m.conf=w.length?'chk':'ok'});
+    m.why=w;m.wc=c;m.conf=w.length?'chk':'ok'});
   return rows;
 }
-const candScore=m=>(m.why.includes('slabý signál')?4:0)+(m.why.some(x=>x.startsWith('jiný'))?3:0)+(m.n===1?2:0)+(m.why.length?1:0);
+const candScore=m=>(m.wc.includes('weak')?4:0)+(m.wc.includes('man')||m.wc.includes('type')?3:0)+(m.wc.includes('one')?2:0)+(m.wc.length?1:0);
 function zasToggle(k,quiet){const was=!!zas.excl[k];if(was)delete zas.excl[k];else zas.excl[k]=1;zasVer++;saveZas(true);drawZas(true);
   if(!quiet)toast(was?'Modul vrácen do výsledku.':'Modul vyřazen z výsledku.',{undo:()=>zasToggle(k,true)})}
 function zasTblClick(e){const x=e.target.closest('[data-ex]');if(x){zasToggle(x.dataset.ex);return}zasSortClick(e)}
@@ -660,10 +675,10 @@ function zasTick(){
   if(!$('shBg').hidden&&zas.phase==='bg'&&$('bgBody')._v!==zasVer)openBg();
 }
 setInterval(zasTick,1000);
-const ZAS_COLS=[['x',''],['i','#'],['id','rádiové ID'],['conf','jistota'],['src','zdroj'],['man','výrobce'],['type','typ'],['ver','verze'],['enc','šifrování'],['n','telegramů'],['rl','signál'],['rmax','max'],['first','první'],['last','poslední'],['ivl','interval'],['st','hlášení']];
+const ZAS_COLS=[['x',''],['i','#'],['id','rádiové ID'],['man','výrobce'],['type','typ'],['ver','verze'],['enc','šifrování'],['n','telegramů'],['rl','signál'],['rmax','max'],['first','první'],['last','poslední'],['ivl','interval']];
 function zasRows(){
   const rows=zasAssess(zasResult().map(m=>Object.assign(m,{ivl:m.n>1?Math.round((m.last-m.first)/(m.n-1)/1000):null})));
-  const val=(m,k)=>k==='man'?(manName(m.man)||m.maker||''):k==='type'?typeName(m.type):k==='st'?flagsOf(m.st).join(', '):k==='i'?m.first:k==='conf'?m.why.length:m[k];
+  const val=(m,k)=>k==='man'?(manName(m.man)||m.maker||''):k==='type'?typeName(m.type):k==='i'?m.first:m[k];
   rows.sort((a,b)=>{const x=val(a,zasSort.k),y=val(b,zasSort.k);return (a.ex-b.ex)||((x??-1e15)>(y??-1e15)?1:(x??-1e15)<(y??-1e15)?-1:0)*zasSort.dir||(b.last-a.last)});   // vyřazené vždy na konci
   return rows;
 }
@@ -701,8 +716,8 @@ function openBg(){
 }
 function zasCsv(){
   const cl=v=>v&&v.t?'="'+v.t.replace(/[;\r\n"]/g,',')+'"':String(v??'').replace(/[;\r\n]/g,',');
-  const rows=zasRows().filter(m=>!m.ex).map((m,i)=>[zas.name,i+1,txt(m.id),m.conf==='ok'?'jistý':'ověřit',m.why.join(', '),m.src,txt(m.raw),manName(m.man)||m.maker||'',m.man,typeName(m.type),m.ver??'',m.n?encName(m.enc):'',m.n,m.rl??'',m.rmax??'',(m.rc||m.n)&&m.rl!=null?Math.round(m.rsum/(m.rc||m.n)):'',m.n?dtm(new Date(m.first)):'',m.n?dtm(new Date(m.last)):'',m.ivl??'',flagsOf(m.st).join(', ')].map(cl).join(';'));
-  return '﻿'+['zakazka;poradi;radiove_id;jistota;duvod;zdroj;kod_ze_stitku;vyrobce;kod_vyrobce;typ;verze;sifrovani;pocet_telegramu;signal_posledni_dbm;signal_max_dbm;signal_prumer_dbm;prvni_prijem;posledni_prijem;interval_s;hlaseni',...rows].join('\r\n');
+  const rows=zasRows().filter(m=>!m.ex).map((m,i)=>[zas.name,i+1,txt(m.id),m.conf==='ok'?'v pořádku':'podezřelý',m.why.join(', '),m.src,txt(m.raw),manName(m.man)||m.maker||'',m.man,typeName(m.type),m.ver??'',m.n?encName(m.enc):'',m.n,m.rl??'',m.rmax??'',(m.rc||m.n)&&m.rl!=null?Math.round(m.rsum/(m.rc||m.n)):'',m.n?dtm(new Date(m.first)):'',m.n?dtm(new Date(m.last)):'',m.ivl??'',flagsOf(m.st).join(', ')].map(cl).join(';'));
+  return '﻿'+['zakazka;poradi;radiove_id;kontrola;duvod;zdroj;kod_ze_stitku;vyrobce;kod_vyrobce;typ;verze;sifrovani;pocet_telegramu;signal_posledni_dbm;signal_max_dbm;signal_prumer_dbm;prvni_prijem;posledni_prijem;interval_s;hlaseni',...rows].join('\r\n');
 }
 function zasStart(phase){
   if(!connected()){toast('Nejdřív připojte přijímač (EWR-TD nebo USB dongle).',{err:true});connect();return}
@@ -722,19 +737,22 @@ function drawZas(force){
       const t=$(ph==='ship'?'zRes':'zBgT');
       if(t&&t._v!==zasVer){const y=t.scrollTop,x=t.scrollLeft;t.innerHTML=ph==='ship'?zasTableHtml():bgTableHtml();t.scrollTop=y;t.scrollLeft=x;t._v=zasVer;setHtml($('zC'),zasCountHtml(ph,E))}}
     return}
-  const head=`<div class="phead"><div><div class="eyebrow">zásilka pro zákazníka</div><h2>${esc(zas.name||'nová zásilka')}</h2></div></div>`;
+  const sub=ph==='setup'?'':[E?'očekáváno '+E+' ks':'',zas.expMan,kindName(zas.expKind)].filter(Boolean).join(' · ');
+  const head=`<div class="phead"><div><div class="eyebrow">zásilka pro zákazníka</div><h2>${esc(zas.name||'nová zásilka')}</h2>${sub?`<div style="font-size:14px;color:var(--muted)">${esc(sub)}</div>`:''}</div></div>`;
   const steps=`<div class="zsteps">${[['1','rádiové pozadí',['bg'].includes(ph),['gap','ship','done'].includes(ph)],['2','snímání zásilky',ph==='ship',ph==='done'],['3','výsledek',ph==='done',false]].map(([n,t,act,ok])=>`<span class="${act?'act':ok?'ok':''}"><b>${ok?'✓':n}</b>${t}</span>`).join('')}</div>`;
   const busy=ph==='bg'||ph==='ship',og=zas.gaps[zas.gaps.length-1];
   let conn=connected()?'':busy?`<div class="errbox"><b>Přijímač je odpojený – snímání teď nic nezachytává.</b>${og&&!og.b?` Výpadek od ${hhmm(og.a)}.`:''} ${dev&&!dgOn()?'Zkouším se znovu připojit…':''} <button class="btn sm primary" id="zConn" style="margin-left:6px">připojit</button></div>`
     :`<div class="warnbox">Přijímač není připojený. <button class="btn sm primary" id="zConn" style="margin-left:6px">připojit</button></div>`;
   if(connected()&&busy&&devState&&devState.bat!=null&&devState.bat<20)conn+=`<div class="warnbox">Slabá baterie EWR-TD (${devState.bat} %). Připojte nabíječku USB-C, jinak se přijímač během snímání vypne.</div>`;
-  const keep=ph==='setup'&&b.querySelector('#zName')?{n:$('zName').value,e:$('zExp').value,bg:$('zBg').value,sh:$('zSh').value}:null;
+  const keep=ph==='setup'&&b.querySelector('#zName')?{n:$('zName').value,e:$('zExp').value,bg:$('zBg').value,sh:$('zSh').value,m:$('zMan').value,k:$('zKind').value}:null;
   let body='';
   if(ph==='setup'){
     body=`<div style="font-size:15px">Nejdřív sejme rádiové pozadí místa, pak moduly po přivezení palety. Moduly zásilky = zachycené ve 2. kroku, které nebyly v rádiovém pozadí. Nejlépe v kovovém kontejneru mimo dosah skladu.</div>
       <div class="fields">
         <label class="field full">zakázka / zákazník<input id="zName" value="${esc(zas.name)}" placeholder="např. SVJ Lipová 12"></label>
-        <label class="field">očekávaný počet<input id="zExp" inputmode="numeric" value="${esc(zas.expected)}" placeholder="nepovinné"></label>
+        <label class="field">výrobce modulů<select id="zMan"><option value="">nepovinné</option>${MANS.map(n=>`<option${n===zas.expMan?' selected':''}>${esc(n)}</option>`).join('')}</select></label>
+        <label class="field">druh<select id="zKind">${KINDS.map(([k,t])=>`<option value="${k}"${k===zas.expKind?' selected':''}>${k?t:'nepovinné'}</option>`).join('')}</select></label>
+        <label class="field full">očekávaný počet modulů<input id="zExp" inputmode="numeric" value="${esc(zas.expected)}" placeholder="nepovinné"></label>
         <label class="field">rádiové pozadí (min)<input id="zBg" inputmode="numeric" value="${zas.bgMin}"></label>
         <label class="field">zásilka (min)<input id="zSh" inputmode="numeric" value="${zas.shMin}"></label>
       </div>${conn}
@@ -764,7 +782,7 @@ function drawZas(force){
     body=`<div class="zbig"><b>${n}</b><span>${pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky${E?` · očekáváno ${E}`:''}</span></div>
       ${E&&diff!==0?`<div class="${diff<0?'errbox':'warnbox'}">${diff<0?`Chybí ${-diff} – některé moduly nevysílaly nebo byly i v rádiovém pozadí. Prodlužte načítání nebo zkontrolujte paletu.`:`O ${diff} víc, než se čekalo – v dosahu mohla být i jiná měřidla.${cand.length?' Níže jsou moduly, které se od zásilky nejvíc liší.':''}`}</div>`:E?'<div class="okbox">Počet souhlasí s objednávkou.</div>':''}
       ${cand.length?`<div class="warnbox" id="zCand"><b>Navrženo k vyřazení (${cand.length})</b>${cand.map(m=>`<div class="zc"><span class="mono">${esc(m.id)}</span><span>${esc(m.why.join(', '))}</span><button class="xb" data-ex="${esc(m.k)}">vyřadit</button></div>`).join('')}<button class="btn sm" id="zExAll" style="margin-top:8px">vyřadit všechny navržené</button></div>`:''}
-      ${chk.length||nex?`<div style="font-size:14px;color:var(--ink)">${chk.length?`<span class="chk">${pl(chk.length,'modul','moduly','modulů')} k ověření</span> – důvod je ve sloupci jistota. `:''}${nex?`Ručně vyřazeno: ${nex}. `:''}Modul vyřadíte nebo vrátíte tlačítkem ✕ na začátku řádku.</div>`:''}
+      ${chk.length||nex?`<div style="font-size:14px;color:var(--ink)">${chk.length?`<span class="chk">Podezřelé: ${chk.length}</span> – v tabulce žlutě, důvod je pod řádkem. `:''}${nex?`Ručně vyřazeno: ${nex}. `:''}Modul vyřadíte nebo vrátíte tlačítkem ✕ na začátku řádku.</div>`:''}
       ${(()=>{const os=outage(zas.shStart,zas.shEnd),ob=outage(zas.bgStart,zas.bgEnd);return os||ob?`<div class="warnbox">${os?`Během snímání zásilky byl přijímač ${mmss(os)} min odpojen. Výsledek může být neúplný – doporučuji „načítat zásilku znovu“.`:''} ${ob?`Rádiové pozadí nebylo snímáno ${mmss(ob)} min, některé moduly z okolí se mohou objevit v zásilce navíc.`:''}</div>`:''})()}
       <div style="font-size:13px;color:var(--muted)">Rádiové pozadí: ${pl(Object.keys(zas.bg).length,'modul','moduly','modulů')} · vyloučeno ${zasExcluded()} · načítání ${dtm(new Date(zas.shStart))}–${new Date(zas.shEnd).toLocaleTimeString('cs-CZ',{hour12:false})}. Řazení: klepněte na záhlaví sloupce.</div>
       <div class="tscroll" id="zRes">${zasTableHtml(rows)}</div>
@@ -774,28 +792,32 @@ function drawZas(force){
   const sc=b.querySelector('.tscroll'),st=sc?sc.scrollTop:0;
   b.innerHTML=head+steps+body;b.dataset.ph=ph;b.dataset.conn=String(connected());
   const sc2=b.querySelector('.tscroll');if(sc2)sc2.scrollTop=st;
-  if(keep){$('zName').value=keep.n;$('zExp').value=keep.e;$('zBg').value=keep.bg;$('zSh').value=keep.sh}
+  if(keep){$('zName').value=keep.n;$('zExp').value=keep.e;$('zBg').value=keep.bg;$('zSh').value=keep.sh;$('zMan').value=keep.m;$('zKind').value=keep.k}
   const on=(id,f)=>{const e=$(id);if(e)e.onclick=f};
   on('zConn',connect);
-  on('zGo',()=>{zas.name=$('zName').value.trim();zas.expected=$('zExp').value.replace(/\D/g,'');const num=(v,d)=>{const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?d:x};zas.bgMin=Math.max(0,num($('zBg').value,10));zas.shMin=Math.max(0.1,num($('zSh').value,30));
+  on('zGo',()=>{zas.name=$('zName').value.trim();zas.expected=$('zExp').value.replace(/\D/g,'');zas.expMan=$('zMan').value;zas.expKind=$('zKind').value;const num=(v,d)=>{const x=parseFloat(String(v).replace(',','.'));return isNaN(x)?d:x};zas.bgMin=Math.max(0,num($('zBg').value,10));zas.shMin=Math.max(0.1,num($('zSh').value,30));
     if(zas.bgMin===0){zas.bg={};zas.phase='gap';saveZas(true);drawZas(true);return}zasStart('bg')});
   on('zGo2',()=>zasStart('ship'));
   on('zEnd',()=>{if(zas.phase==='bg')zas.bgEnd=Date.now();else zas.shEnd=Date.now();zasTick()});
   on('zBgView',openBg);if($('zBgT'))$('zBgT').onclick=bgSortClick;
   on('zMore',()=>{if(!confirm('Načíst zásilku znovu? Dosavadní výsledek se nahradí, rádiové pozadí zůstane.'))return;zasStart('ship')});
-  on('zReset',()=>{if(!confirm('Zrušit načítání a začít znovu? Naměřená data se smažou.'))return;zas=Object.assign({},ZAS0,{name:zas.name,expected:zas.expected,bgMin:zas.bgMin,shMin:zas.shMin,bg:{},sh:{},scan:{},gaps:[],excl:{}});zasVer++;saveZas(true);drawZas(true)});
+  on('zReset',()=>{if(!confirm('Zrušit načítání a začít znovu? Naměřená data se smažou.'))return;zas=Object.assign({},ZAS0,{name:zas.name,expected:zas.expected,expMan:zas.expMan,expKind:zas.expKind,bgMin:zas.bgMin,shMin:zas.shMin,bg:{},sh:{},scan:{},gaps:[],excl:{}});zasVer++;saveZas(true);drawZas(true)});
   if($('zCand'))$('zCand').onclick=e=>{const x=e.target.closest('[data-ex]');if(x)zasToggle(x.dataset.ex)};
   on('zExAll',()=>{const ks=[...$('zCand').querySelectorAll('[data-ex]')].map(b=>b.dataset.ex);ks.forEach(k=>zas.excl[k]=1);zasVer++;saveZas(true);drawZas(true);
     toast(`Vyřazeno ${pl(ks.length,'modul','moduly','modulů')}.`,{undo:()=>{ks.forEach(k=>delete zas.excl[k]);zasVer++;saveZas(true);drawZas(true)}})});
   on('zCsv',()=>shareCsv(fname('zasilka_'+(zas.name||'radio')),zasCsv(),'Zásilka '+zas.name));
   if($('zRes'))$('zRes').onclick=zasTblClick;
 }
-function zasTableHtml(rows){rows=rows||zasRows();return `<table class="tbl"><thead><tr>${ZAS_COLS.map(([k,t])=>`<th data-sort="${k}" style="cursor:pointer;user-select:none;${k===zasSort.k?'color:var(--ink)':''}">${t}${k===zasSort.k?(zasSort.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
-      ${rows.map((m,i)=>`<tr${m.ex?' class="ex"':m.n===1?' style="color:var(--muted)"':''}><td><button class="xb" data-ex="${esc(m.k)}" aria-label="${m.ex?'vrátit do výsledku':'vyřadit z výsledku'}">${m.ex?'vrátit':'✕'}</button></td><td>${m.ex?'–':i+1}</td><td class="mono" style="color:var(--ink)">${esc(m.id)}</td><td>${m.ex?'vyřazeno':m.conf==='ok'?'<span style="color:var(--ok)">✓</span>':'<span class="chk">ověřit</span> '+esc(m.why.join(', '))}</td><td>${m.src}</td><td>${esc(manName(m.man)||m.maker||'')}</td><td>${esc(typeName(m.type))}</td><td>${m.ver??'–'}</td><td>${m.n?encName(m.enc):'–'}</td><td>${m.n}</td><td>${m.rl!=null?m.rl+' dBm':'–'}</td><td>${m.rmax!=null?m.rmax+' dBm':'–'}</td><td>${new Date(m.first).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${new Date(m.last).toLocaleTimeString('cs-CZ',{hour12:false})}</td><td>${m.ivl!=null?m.ivl+' s':'–'}</td><td>${esc(flagsOf(m.st).join(', '))}</td></tr>`).join('')}</tbody></table>`}
+function zasTableHtml(rows){rows=rows||zasRows();let i=0;const T=t=>new Date(t).toLocaleTimeString('cs-CZ',{hour12:false});
+  return `<table class="tbl ztbl"><thead><tr>${ZAS_COLS.map(([k,t])=>`<th data-sort="${k}" style="cursor:pointer;user-select:none;${k===zasSort.k?'color:var(--ink)':''}">${t}${k===zasSort.k?(zasSort.dir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(m=>{const sus=!m.ex&&m.conf==='chk',fl=m.ex?[]:flagsOf(m.st);
+      const note=(sus?`<b>podezřelý:</b> ${esc(m.why.join(' · '))}`:'')+(fl.length?`${sus?' · ':''}hlášení modulu: ${esc(fl.join(', '))}`:'');
+      return `<tr class="${m.ex?'ex':sus?'sus':''}${note?' hn':''}"><td><button class="xb" data-ex="${esc(m.k)}" aria-label="${m.ex?'vrátit do výsledku':'vyřadit z výsledku'}">${m.ex?'vrátit':'✕'}</button></td><td>${m.ex?'–':++i}</td><td class="mono" style="color:var(--ink)">${esc(m.id)}${m.src!=='rádio'?` <span class="stag">${m.src==='štítek'?'jen štítek':'+ štítek'}</span>`:''}</td><td>${esc(manName(m.man)||m.maker||'')}</td><td>${esc(typeName(m.type))}</td><td>${m.ver??'–'}</td><td>${m.n?encName(m.enc):'–'}</td><td>${m.n}</td><td>${m.rl!=null?m.rl+' dBm':'–'}</td><td>${m.rmax!=null?m.rmax+' dBm':'–'}</td><td>${m.n?T(m.first):'–'}</td><td>${m.n?T(m.last):'–'}</td><td>${m.ivl!=null?m.ivl+' s':'–'}</td></tr>`+
+        (note?`<tr class="note${sus?' sus':''}"><td colspan="${ZAS_COLS.length}"><div>${note}</div></td></tr>`:'')}).join('')}</tbody></table>`}
 function zasSortClick(e){const th=e.target.closest('[data-sort]');if(!th||th.dataset.sort==='x')return;const k=th.dataset.sort;if(k===zasSort.k)zasSort.dir=-zasSort.dir;else zasSort={k,dir:['id','man','type','enc','st','i','src'].includes(k)?1:-1};LS('ewrsk_zassort',zasSort);const t=$('zRes');if(t){t.innerHTML=zasTableHtml();t._v=zasVer}}
 const hhmm=t=>new Date(t).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
 function zasCountHtml(ph,E){if(ph==='bg'){const n=Object.keys(zas.bg).length;return `<b>${n}</b> ${pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} v rádiovém pozadí (vyloučí se)`}
-  const rs=zasRows(),inc=rs.filter(m=>!m.ex),n=inc.length,nc=inc.filter(m=>m.conf==='chk').length,ns=Object.keys(zas.scan).length;return `<b>${n}</b>${E?` z ${E} očekávaných modulů`:' '+pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky · ${zasExcluded()} vyloučeno (rádiové pozadí)${ns?' · '+pl(ns,'štítek','štítky','štítků'):''}${nc?` · <span class="chk">${nc} k ověření</span>`:''}`+(E&&n>=E?'<div class="okbox" style="margin-top:8px">Nalezen očekávaný počet. Můžete ukončit dříve, nebo nechat doběhnout.</div>':'')}
+  const rs=zasRows(),inc=rs.filter(m=>!m.ex),n=inc.length,nc=inc.filter(m=>m.conf==='chk').length,ns=Object.keys(zas.scan).length;return `<b>${n}</b>${E?` z ${E} očekávaných modulů`:' '+pl(n,'modul','moduly','modulů').replace(/^\d+ /,'')} zásilky · ${zasExcluded()} vyloučeno (rádiové pozadí)${ns?' · '+pl(ns,'štítek','štítky','štítků'):''}${nc?` · <span class="chk">${nc} podezřelé</span>`:''}`+(E&&n>=E?'<div class="okbox" style="margin-top:8px">Nalezen očekávaný počet. Můžete ukončit dříve, nebo nechat doběhnout.</div>':'')}
 function zasLiveList(){return zasResult().sort((a,b)=>b.last-a.last).slice(0,40).map(m=>`<div class="li" style="font-size:14px"><span class="mono" style="color:var(--ink)">${m.id}</span><span style="flex:1;color:var(--muted)">${esc(manName(m.man)||m.maker||'')}${m.type!=null?' · '+esc(typeName(m.type)):''}</span><span>${m.rl!=null?m.rl+' dBm':m.src}</span></div>`).join('')}
 
 
