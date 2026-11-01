@@ -198,6 +198,9 @@ main .wrap{padding:8px 16px 150px}
 </style>
 </head>
 <body>
+<!-- úvodní logo přes celou obrazovku na 1,5 s -->
+<div id="splash" style="position:fixed;inset:0;z-index:9999;background:#000000;display:flex;align-items:center;justify-content:center;transition:opacity .3s"><img src="ewr-sklad-512.png" alt="EWR-Sklad" style="width:min(80vw,80vh,512px);height:auto"></div>
+<script>setTimeout(()=>{const s=document.getElementById('splash');if(!s)return;s.style.opacity='0';s.style.pointerEvents='none';setTimeout(()=>s.remove(),350)},1500)</script>
 
 <header class="top"><div class="wrap">
   <span class="bat" id="tBat" hidden role="img" aria-label="baterie EWR-TD"><i></i><i></i><i></i><i></i><i></i></span><span class="dot" id="tDot"></span>
@@ -279,8 +282,8 @@ const MEDIUM={0x02:'elektřina',0x03:'plyn',0x04:'teplo',0x06:'TUV',0x07:'voda',
 const MAN={APA:'Apator',KAM:'Kamstrup',DME:'Diehl',HYD:'Diehl',QDS:'Qundis',SON:'Sontex',LSE:'Siemens',ITW:'Itron',SEN:'Sensus',BMT:'B METERS',ZRI:'Zenner',ZRM:'Zenner',EFE:'Engelmann',TCH:'Techem',IST:'ista',LUG:'Landis+Gyr',ELS:'Elster',MAD:'Maddalena',AMT:'Aquametro',WEH:'Wehrle'};
 const typeName=t=>t==null?'':(MEDIUM[t]||'typ 0x'+h2(t));
 const manName=m=>m?(MAN[m]||m):'';
-const APP_VER='1.3';    // verze pro uživatele (menu, poslední řádek)
-const APP_BUILD=20;   // interní číslo sestavení – posílá se s předávanými záznamy kvůli kompatibilitě
+const APP_VER='1.4';    // verze pro uživatele (menu, poslední řádek)
+const APP_BUILD=21;   // interní číslo sestavení – posílá se s předávanými záznamy kvůli kompatibilitě
 const WAIT_MIN=10;   // po kolika minutách bez vysílání je měřidlo „problém“
 
 
